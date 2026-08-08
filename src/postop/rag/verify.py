@@ -49,6 +49,12 @@ _ESPACIOS = re.compile(r"\s+")
 # jurado siempre es texto del corpus, nunca texto del modelo.
 UMBRAL_COBERTURA = 0.85
 
+# Fraccion de las palabras de contenido de la RESPUESTA que deben aparecer en el
+# fragmento citado. Mas bajo que el de la cita porque una respuesta reformula
+# para el paciente ("le puede salir liquido" por "secrecion serosa"), pero lo
+# bastante alto como para cortar afirmaciones que la fuente no menciona.
+UMBRAL_RESPALDO = 0.55
+
 _VACIAS = {
     "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al", "y", "o", "que",
     "en", "con", "por", "para", "se", "su", "sus", "es", "son", "como", "mas", "menos", "esta",
@@ -86,6 +92,27 @@ def cobertura(cita: str, fuente: str) -> float:
     if not palabras_cita:
         return 0.0
     return len(palabras_cita & _palabras_contenido(fuente)) / len(palabras_cita)
+
+
+def respalda(respuesta: str, fuente: str) -> tuple[bool, float]:
+    """¿La afirmacion del agente se sostiene en el fragmento citado?
+
+    Verificar solo que la cita exista en el corpus deja un agujero: el modelo
+    puede inventar una respuesta y adjuntarle cualquier frase real como prueba.
+    Medido: ante "¿es normal que la herida se vea rojita?" el modelo respondio
+    "la herida puede presentar coloracion roja por la inflamacion" y cito "no
+    sumergir la herida en agua". La cita verificaba al 100% y no respaldaba nada.
+
+    Aqui se comprueba lo contrario: que las palabras con contenido de la
+    RESPUESTA aparezcan en el fragmento. El umbral es permisivo porque una
+    respuesta es una parafrasis, no una copia, pero corta las afirmaciones que
+    introducen conceptos que la fuente no menciona.
+    """
+    palabras = _palabras_contenido(respuesta)
+    if not palabras:
+        return False, 0.0
+    proporcion = len(palabras & _palabras_contenido(fuente)) / len(palabras)
+    return proporcion >= UMBRAL_RESPALDO, proporcion
 
 
 def _mejor_frase(cita: str, fuente: str) -> str:

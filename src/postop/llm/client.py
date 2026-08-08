@@ -136,8 +136,11 @@ class ClienteLLM:
                 "temperature": temperatura,
                 "num_predict": max_tokens,
                 # Contexto acotado a proposito: en CPU el prellenado domina la
-                # latencia, y un contexto grande que no se usa se paga igual.
-                "num_ctx": 4096,
+                # latencia, y la cache KV de un contexto grande ocupa memoria
+                # aunque no se use. Medido en la maquina objetivo (11 GB), con
+                # 4096 el proceso terminaba paginando a disco y un turno llego a
+                # costar 33 segundos. 2048 sobra para 2 fragmentos y el historial.
+                "num_ctx": 2048,
             },
         }
         if esquema is not None:
@@ -171,7 +174,7 @@ class ClienteLLM:
             "messages": mensajes,
             "stream": True,
             "keep_alive": KEEP_ALIVE,
-            "options": {"temperature": temperatura, "num_predict": max_tokens, "num_ctx": 4096},
+            "options": {"temperature": temperatura, "num_predict": max_tokens, "num_ctx": 2048},
         }
         inicio = time.perf_counter()
         primer_token: float | None = None

@@ -27,22 +27,29 @@ from postop.rag.retrieve import Pasaje
 
 # Se habla por telefono: dos frases es el limite de lo que un paciente retiene
 # de una vez. Las instrucciones largas se entregan por partes (ver maquina.py).
-MAX_TOKENS_RESPUESTA = 120
+MAX_TOKENS_RESPUESTA = 100
 
-SISTEMA = """Eres un asistente de seguimiento postoperatorio hablando por teléfono
-con un paciente colombiano. Respondes usando ÚNICAMENTE los documentos que se te
-entregan.
+# Recorte de cada fragmento antes de entrar al prompt.
+#
+# En CPU el prellenado domina la latencia: medido en una llamada real, un prompt
+# de 2195 tokens costo ~29 segundos solo en leerse. Un fragmento entero (~320
+# tokens) aporta contexto que casi nunca hace falta para responder una pregunta
+# concreta, asi que se recorta. La cita se sigue verificando contra el fragmento
+# COMPLETO en la base, no contra este recorte.
+MAX_CARACTERES_FRAGMENTO = 700
 
-REGLAS ABSOLUTAS:
-1. Si la respuesta no está en los documentos, responde con "valor": null. NUNCA
-   uses conocimiento propio. Es correcto y preferible decir que no sabes.
-2. "cita_literal" debe ser una frase copiada TAL CUAL de los documentos, sin
-   cambiar ni una palabra. Es lo que permite verificar tu respuesta.
-3. Nunca menciones medicamentos, dosis, ni cantidades. Eso lo define el médico.
-4. Nunca tranquilices al paciente sobre un síntoma. Si algo suena preocupante,
-   dile que lo vas a reportar al equipo médico.
-5. Habla de "usted", en español colombiano, claro y cálido.
-6. Máximo 2 frases cortas. Es una llamada, no un folleto."""
+# El prompt de sistema tambien se paga en cada turno. Esta version dice lo mismo
+# que la anterior en la mitad de tokens.
+SISTEMA = """Asistente de seguimiento postoperatorio, hablando por teléfono con un
+paciente colombiano. Responde SOLO con lo que digan los documentos entregados.
+
+REGLAS:
+1. Si la respuesta no está en los documentos, "respuesta": null. Nunca uses
+   conocimiento propio. Decir que no sabes es correcto.
+2. "cita_literal": una frase copiada TAL CUAL del documento, mínimo 10 palabras.
+3. Nunca menciones medicamentos, dosis ni cantidades.
+4. Nunca tranquilices ante un síntoma; di que lo reportarás al equipo médico.
+5. Trata de "usted". Máximo 2 frases cortas."""
 
 ESQUEMA = {
     "type": "object",
@@ -92,7 +99,9 @@ async def responder(
             FRASE_LIMITE, False, None, "", "no hay fragmentos recuperados para esta pregunta"
         )
 
-    contexto = guardas.envolver_contexto([p.texto for p in pasajes])
+    contexto = guardas.envolver_contexto(
+        [p.texto[:MAX_CARACTERES_FRAGMENTO] for p in pasajes]
+    )
     mensajes = [
         {"role": "system", "content": SISTEMA},
         {"role": "user", "content": f"{contexto}\n\nPregunta del paciente: {pregunta}"},
@@ -102,8 +111,8 @@ async def responder(
     )
 
     datos = _parsear(respuesta.texto)
-    texto = (datos.get("respuesta") or "").strip()
-    cita = (datos.get("cita_literal") or "").strip()
+    texto = _limpiar_nulo(datos.get("respuesta"))
+    cita = _limpiar_nulo(datos.get("cita_literal"))
     indice = datos.get("documento")
 
     if not texto:
@@ -121,6 +130,19 @@ async def responder(
     if not anclaje.anclada:
         return RespuestaAnclada(FRASE_LIMITE, False, None, cita, anclaje.motivo, respuesta)
 
+    # Que la cita exista no basta: tiene que respaldar lo que el agente va a
+    # decir. Sin esta comprobacion, el modelo puede inventar una respuesta y
+    # adjuntarle cualquier frase real del corpus como prueba.
+    fuente = next((p for p in pasajes if p.chunk_uid == anclaje.chunk_uid), pasajes[0])
+    sostenida, proporcion = verify.respalda(texto, fuente.texto)
+    if not sostenida:
+        return RespuestaAnclada(
+            FRASE_LIMITE, False, None, cita,
+            f"la cita es real pero no respalda la afirmación "
+            f"({proporcion:.0%} de respaldo léxico)",
+            respuesta,
+        )
+
     # Ultimo filtro: ni siquiera una cita valida autoriza a dictar una dosis.
     veredicto = guardas.revisar_salida(texto)
     if veredicto.bloqueado:
@@ -135,6 +157,19 @@ async def responder(
     return RespuestaAnclada(
         texto, True, pasaje, anclaje.cita_verificada or cita, anclaje.motivo, respuesta
     )
+
+
+def _limpiar_nulo(valor) -> str:
+    """Un modelo pequeno a veces escribe la CADENA "null" en vez de un null JSON.
+
+    Medido con llama3.2:1b: devolvio {"respuesta": "null"} y, al ser una cadena
+    no vacia, el agente la daba por buena. El paciente habria oido la palabra
+    "null" por el altavoz.
+    """
+    if not isinstance(valor, str):
+        return ""
+    limpio = valor.strip()
+    return "" if limpio.lower() in {"null", "none", "nulo", "n/a", "na", "-"} else limpio
 
 
 def _parsear(texto: str) -> dict:

@@ -25,3 +25,6 @@ models/
 
 # Analisis estrategico propio: se mantiene local, fuera del repositorio publico.
 PLAN-MAESTRO.md
+
+# Muestras de voz para comparar: se regeneran con scripts/generar_pdf_demo.py
+demo/voces/

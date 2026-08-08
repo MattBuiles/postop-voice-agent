@@ -274,82 +274,117 @@ corresponda al repositorio levanta bandera de integridad ante el panel completo.
 
 `[CÁMARA. Sigue de frente.]`
 
-> *"Segunda pregunta: la decisión técnica más relevante. Fue elegir el modelo de
-> lenguaje, y todo lo demás salió de ahí."*
+> *"Segunda pregunta: la decisión técnica más relevante."*
+
+> *"Fue esta: **el modelo de lenguaje no toma ninguna decisión clínica**. Ni una.
+> No decide si hay que escalar, no elige qué preguntar, y no puede afirmar nada
+> que no esté escrito en un documento. Todo eso lo hace código explícito."*
+
+> *"Suena a que le quité poder al modelo. Le quité responsabilidad, que es
+> distinto. Y de esa decisión salió todo lo demás, incluida la elección del
+> modelo."*
 
 ### ¿Qué alternativas evalué?
 
-> *"El reto permite cuatro familias: Gemini en la gama Flash, Llama vía Groq, y
-> en local Llama de la serie tres punto x o Phi Mini. Evalué las cuatro."*
+> *"Tres, y las tres son lo que uno construye por defecto hoy."*
 
-> *"Las de nube eran atractivas: Gemini por su ventana de contexto enorme, y Groq
-> por su latencia, que para una conversación de voz es lo que más pesa."*
+> *"La primera: un agente conversacional completo. Le das el historial, las
+> herramientas y el criterio clínico en el prompt, y que él conduzca la llamada y
+> decida. Es lo más rápido de montar y lo más impresionante de demostrar."*
+
+> *"La segunda: que el modelo decidiera el triaje con los criterios en el prompt,
+> pero con la conversación guiada por código."*
+
+> *"Y la tercera: entrenar un clasificador con los ciento sesenta casos
+> etiquetados que venían con el reto."*
 
 ### ¿Por qué las descarté?
 
-> *"Al ir a usarlas me encontré con algo: dos de los modelos que el propio
-> material nombraba ya no estaban. Gemini uno punto cinco Flash fue retirado, y
-> Llama tres punto uno de setenta mil millones devuelve error en Groq desde enero
-> del año pasado."*
+> *"A las dos primeras las descarté por la misma razón, y no es teórica."*
 
-> *"Eso no las descalifica: el reto permite usar el sucesor vigente de la misma
-> familia. Pero me dijo algo sobre el riesgo. Mi solución se evalúa en una sesión
-> en vivo y cronometrada, y en la final el panel decide qué probar en el momento.
-> Depender de que un proveedor externo mantenga un modelo disponible, y de un
-> límite de peticiones por minuto, y de la red, es un riesgo que yo no controlo."*
+> *"Si el modelo decide, yo no puedo responder la pregunta que un cliente en
+> salud va a hacer siempre: **por qué escalaron a este paciente y no al otro**.
+> No puedo someter esa decisión a pruebas de regresión, no puedo discutirla con
+> un médico línea por línea, y no puedo garantizar que mañana con la misma
+> entrada dé la misma salida."*
 
-> *"Así que elegí Llama tres punto dos de tres mil millones, corriendo local. No
-> porque sea el mejor modelo, sino porque garantiza que el jurado ejecute
-> exactamente lo mismo que yo, hoy y dentro de seis meses."*
+> *"Con una regla explícita, sí. La mía la evalué contra los ciento sesenta casos
+> etiquetados: cero falsos negativos, cien por ciento de recall en los casos
+> rojos. Y esa evaluación corre como prueba automática: si alguien toca un umbral
+> y aparece un falso negativo, el build falla. Un prompt no me da eso."*
 
-> *"Eso me dejó un problema: un modelo de tres mil millones en CPU no da para
-> razonar libremente. Así que rediseñé la arquitectura para que no hiciera falta.
-> El modelo no conduce la conversación, no decide el triaje y no redacta las
-> preguntas. Solo hace una cosa: leer lo que dijo el paciente y rellenar seis
-> campos tipados, con el formato de salida forzado por esquema."*
+> *"Al clasificador entrenado lo descarté por honestidad. Ciento sesenta casos
+> sintéticos generados por un mismo proceso no son suficientes para entrenar
+> nada que yo quiera poner cerca de un paciente. Y me habría dado el mismo
+> problema de explicabilidad."*
 
-> *"Los números que deciden —temperatura y dolor— ni siquiera los toca el modelo:
-> los saca un parser determinista que acierta ciento ocho de ciento diecisiete
-> sobre los enunciados reales del dataset, y ninguno de sus errores va en la
-> dirección peligrosa."*
+### La consecuencia: el modelo
+
+> *"Aquí está lo interesante. Una vez que el modelo no decide nada, la pregunta
+> de qué modelo usar cambia por completo."*
+
+> *"Ya no necesito el modelo más capaz. Necesito uno que lea una frase en español
+> colombiano y rellene seis campos tipados. Eso lo hace bien un modelo pequeño."*
+
+> *"Y eso me abrió tres cosas que con un modelo grande en la nube no tenía:
+> **los datos del paciente nunca salen de la máquina**, el costo por llamada es
+> literalmente cero, y no hay límite de peticiones por minuto que me tumbe una
+> demostración en vivo."*
+
+> *"En un producto de salud, que la información clínica no viaje a un tercero no
+> es una optimización. Muchas veces es el requisito que decide si se puede
+> desplegar o no."*
+
+> *"Así que Llama tres punto dos de tres mil millones, local. No es un premio de
+> consolación: es lo que la arquitectura hizo posible."*
+
+> *"Y el mismo principio lo apliqué al RAG. El modelo no puede afirmar algo
+> clínico sin entregar la frase textual del documento que lo respalda, y esa
+> frase se verifica contra el fragmento real antes de que el agente hable. Si no
+> verifica, dice que no sabe. La alucinación deja de ser un riesgo que se mitiga
+> con prompts y pasa a ser algo que el sistema no puede hacer."*
 
 ### ¿Qué riesgos identifiqué?
 
 > *"Tres, y los digo sin adornos."*
 
-> *"El primero, y el más serio: mi regla de triaje está calibrada contra ciento
-> sesenta casos generados sintéticamente por un mismo proceso. Es muy probable
-> que sobreajuste a ese generador. Por eso el sistema no depende solo de ella:
-> encima hay banderas rojas por síntomas de texto libre y escalamiento por
-> incertidumbre, capas que no dependen de esa calibración."*
+> *"El primero, y el más serio: mi regla de triaje está calibrada contra datos
+> sintéticos generados por un mismo proceso. Es muy probable que sobreajuste a
+> ese generador. Por eso el sistema no depende solo de ella: encima hay banderas
+> rojas por síntomas de texto libre —sangrado, dificultad para respirar, sospecha
+> de trombosis— y escalamiento automático cuando un dato crítico se queda sin
+> resolver. Esas capas no dependen de la calibración."*
 
-> *"El segundo: el corpus del reto son en su mayoría artículos académicos para
-> profesionales, no material dirigido al paciente. Cuando alguien pregunta algo
-> muy cotidiano, a veces la mejor fuente sencillamente no está, y el agente
-> responde que no sabe. Prefiero eso a que invente, pero es una limitación real."*
+> *"El segundo es el reverso de haber quitado libertad al modelo: el agente es
+> excelente dentro de su protocolo y limitado fuera de él. Si el paciente saca un
+> tema que no está en el corpus, responde que no sabe. Prefiero eso a que
+> invente, pero es una restricción real y hay que decirla."*
 
-> *"Y el tercero: la extracción del campo de movilidad es la más débil, acierta
-> siete de once. Falla sobrecalificando la gravedad, que es la dirección segura,
-> pero falla."*
+> *"Y el tercero, de operación: al correr local, la calidad depende del hardware
+> del cliente. Medí que el modelo se descargaba de memoria entre turnos y un
+> turno llegó a costar diecisiete segundos. Lo resolví manteniéndolo residente y
+> precalentándolo al arrancar, pero es el tipo de detalle que en la nube no
+> existe y aquí hay que gestionar."*
 
 ### ¿Qué cambiaría con dos semanas más?
 
 > *"Cuatro cosas, en este orden."*
 
-> *"Primero, sentarme con un médico a validar los umbrales. Hoy están derivados
-> de datos sintéticos; deberían estar respaldados por criterio clínico."*
+> *"Primero, sentarme con un cirujano a validar los umbrales. Hoy salen de datos
+> sintéticos; tienen que salir de criterio clínico. Es lo único de esta lista que
+> no puedo hacer solo."*
 
-> *"Segundo, meter un reranker en la recuperación. Medí que el modelo denso solo
-> acierta seis de diez consultas coloquiales en el primer puesto; ahí hay margen
-> claro."*
+> *"Segundo, un reranker en la recuperación. Medí que el modelo de embeddings
+> acierta seis de cada diez consultas coloquiales en el primer puesto. Ahí hay
+> margen claro y medible."*
 
-> *"Tercero, un bucle de aprendizaje: que cada escalamiento revisado por un
-> clínico realimente los umbrales, para dejar de depender de una calibración
-> estática."*
+> *"Tercero, cerrar el ciclo: que cada escalamiento revisado por un clínico
+> realimente los umbrales, para dejar de depender de una calibración estática y
+> pasar a una que aprende de su propio uso."*
 
-> *"Y cuarto, telefonía real por SIP, con detección de contestador. Hoy la
-> llamada es por navegador porque el reto lo pedía así, pero para producción hay
-> que marcarle al paciente de verdad."*
+> *"Y cuarto, telefonía real por SIP con detección de contestador. Hoy la llamada
+> es por navegador porque el reto lo pedía así, pero un producto real tiene que
+> marcarle al paciente."*
 
 `[Pausa. Cierra.]`
 

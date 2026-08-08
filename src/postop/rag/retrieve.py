@@ -25,7 +25,15 @@ from postop.rag.embed import Embedder
 
 K_RRF = 60           # constante estandar de RRF: amortigua el peso de los primeros puestos
 N_CANDIDATOS = 20    # por sistema, antes de fusionar
-N_FINAL = 4          # fragmentos que llegan al contexto del modelo
+
+# Fragmentos que llegan al contexto del modelo.
+#
+# Se bajo de 4 a 2 tras medirlo en una llamada real: con 4 fragmentos el prompt
+# alcanzaba 2195 tokens y el turno costaba 40 segundos, de los cuales ~29 eran
+# solo prellenado (la CPU procesa el prompt a ~75 tokens/s). Dos fragmentos
+# bastan para responder una pregunta concreta de un paciente y recortan el
+# prellenado a menos de la mitad.
+N_FINAL = 2
 
 # Realce para material dirigido al paciente.
 #

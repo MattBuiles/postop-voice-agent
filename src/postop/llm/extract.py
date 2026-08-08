@@ -61,11 +61,8 @@ SLOTS: dict[str, EspecSlot] = {
             "Solo si el paciente dice que no puede, no si dice que le cuesta."
         ),
         ejemplos=(
-            ("Ay sí, la verdad me muevo bien, camino normal y me levanto sin problema.", "normal"),
-            ("Me he podido mover bien, camino normal con el andador que me dieron.", "normal"),
-            ("Pues me muevo despacito, como es de esperarse. Camino pasos cortos.",
-             "limitada_esperada"),
-            ("La verdad es que me ha costado mucho moverme y caminar desde la cirugía.",
+            ("Me muevo bien, camino normal con el andador que me dieron.", "normal"),
+            ("Me muevo despacito, como es de esperarse. Camino pasos cortos.",
              "limitada_esperada"),
             ("No he podido levantarme de la cama, no logro pararme.", "incapacitante_nueva"),
         ),
@@ -79,9 +76,8 @@ SLOTS: dict[str, EspecSlot] = {
             "secrecion_purulenta = pus, materia, líquido amarillo o verde, o mal olor."
         ),
         ejemplos=(
-            ("La he visto tranquila, normalita, sin nada raro, ni rojo ni hinchada.", "normal"),
+            ("La he visto normalita, sin nada raro, ni rojo ni hinchada.", "normal"),
             ("Se ve un poquito rojita ahí en el borde, pero nada de pus.", "eritema_leve"),
-            ("Está algo hinchada y colorada alrededor de los puntos.", "eritema_leve"),
             ("Le sale como un líquido amarillo y huele feo.", "secrecion_purulenta"),
         ),
     ),
@@ -94,11 +90,9 @@ SLOTS: dict[str, EspecSlot] = {
             "muy_disminuido = casi no come, no le pasa la comida, no le da hambre."
         ),
         ejemplos=(
-            ("He comido normal, doctor, con ganas y todo.", "normal"),
-            ("Como bien, sí, casi normal.", "normal"),
+            ("He comido normal, con ganas y todo.", "normal"),
             ("Como poquito, se me han quitado un poco las ganas.", "levemente_disminuido"),
-            ("Ay no, casi no me da hambre, como poquitico, todo se me revuelve.",
-             "muy_disminuido"),
+            ("Casi no me da hambre, como poquitico, todo se me revuelve.", "muy_disminuido"),
         ),
     ),
     "sueno": EspecSlot(
@@ -110,8 +104,7 @@ SLOTS: dict[str, EspecSlot] = {
             "muy_alterado = casi no duerme, no pega el ojo, pasa la noche en vela."
         ),
         ejemplos=(
-            ("He dormido bien, tranquilo, apenas un poco de incomodidad al acostarme.", "normal"),
-            ("Duermo bien, normal, no me despierto por nada raro.", "normal"),
+            ("He dormido bien, apenas un poco de incomodidad al acostarme.", "normal"),
             ("Me despierto varias veces en la noche pero vuelvo a dormirme.",
              "levemente_alterado"),
             ("Casi no pego el ojo, paso la noche dando vueltas.", "muy_alterado"),
