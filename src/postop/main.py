@@ -475,6 +475,12 @@ async def _procesar_turno(ws, estado, audio, evento, enviar_agente, texto_direct
     await enviar_agente(accion, crono.to_dict(), crono)
     crono.marcar("total")
     latencias = crono.to_dict()
+    # Segundo envio con las latencias completas: el primero sale antes de
+    # sintetizar el audio, asi que no incluye ni el TTS ni el total. Sin esto el
+    # panel oculta justo el dato que la rubrica pide medir -- el tiempo hasta
+    # que empieza a sonar el agente.
+    await ws.send_json({"tipo": "latencias", "latencias": latencias,
+                        "total_ms": round(crono.marcas.get("primer_audio", crono.total_ms))})
 
     estado.registrar(maquina.Turno(hablante, texto, slot, extraccion.to_dict(),
                                    decision.to_dict(), citas, latencias, tokens))

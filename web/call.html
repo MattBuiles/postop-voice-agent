@@ -201,6 +201,7 @@ function alRecibir(ev) {
     case "respuesta_anclada": pintarFuente(m); break;
     case "audio_inicio": tasaAgente = m.sample_rate; recibiendoAudio = true; break;
     case "audio_fin": recibiendoAudio = false; break;
+    case "latencias": pintarLatencias(m.latencias, m.total_ms); break;
     case "resumen": burbuja("sistema", "Resumen: triaje " + m.decision.nivel + " · " + m.proximos_pasos); break;
   }
 }
@@ -252,9 +253,22 @@ function pintarFuente(m) {
     + $("#fuentes").innerHTML;
 }
 
-function pintarLatencias(l) {
-  $("#latencias").innerHTML = Object.entries(l)
-    .map(([k, v]) => `<div class="metrica"><span>${k}</span><span>${v} ms</span></div>`).join("");
+// Las marcas del cronometro son acumuladas desde que el paciente calla. Aqui se
+// muestran como coste POR ETAPA, que es lo que permite ver donde se va el tiempo.
+const ETAPAS = [["stt","transcripción"],["extraccion","modelo"],["rag","búsqueda"],
+                ["generacion","respuesta"],["primer_audio","voz"]];
+function pintarLatencias(l, total) {
+  let previo = 0, filas = "";
+  for (const [clave, etiqueta] of ETAPAS) {
+    if (l[clave] == null) continue;
+    const propio = Math.max(0, Math.round(l[clave] - previo));
+    previo = l[clave];
+    filas += `<div class="metrica"><span>${etiqueta}</span><span>${propio} ms</span></div>`;
+  }
+  if (total != null) filas += `<div class="metrica" style="border-top:1px solid var(--linea);`
+    + `margin-top:4px;padding-top:4px;color:var(--txt)"><span><b>hasta oír al agente</b></span>`
+    + `<span><b>${total} ms</b></span></div>`;
+  $("#latencias").innerHTML = filas;
 }
 
 function enviarJSON(o) { if (ws?.readyState === 1) ws.send(JSON.stringify(o)); }
