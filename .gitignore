@@ -1,0 +1,24 @@
+# Secretos
+.env
+
+# Datos del reto: 133 MB de PDFs cuyos derechos son de sus autores.
+# Se clonan aparte con `make dataset`; no se redistribuyen en este repo.
+challenge-data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Runtime
+logs/
+data/*.db-wal
+data/*.db-shm
+data/uploads/
+models/
+
+# Sistema
+.DS_Store

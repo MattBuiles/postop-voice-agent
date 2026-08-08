@@ -1,0 +1,53 @@
+[project]
+name = "postop-voice-agent"
+version = "0.1.0"
+description = "Agente de voz para seguimiento postoperatorio con RAG trazable y triaje determinista"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+
+# Todas las dependencias son MIT / Apache-2.0 / BSD. Ninguna arrastra torch:
+# la instalacion completa debe caber holgadamente en el presupuesto de 15 min de G2.
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.1",
+    "python-multipart==0.0.20",
+    "httpx==0.28.1",
+    "numpy==2.2.1",
+    "sqlite-vec==0.1.6",
+    "fastembed==0.5.1",
+    "pypdfium2==4.30.0",
+    "openpyxl==3.1.5",
+    "piper-tts==1.2.0",
+    "faster-whisper==1.1.1",
+]
+
+[project.optional-dependencies]
+# Backend de embeddings alterno (BGE-M3, el sugerido por el reto). Arrastra torch:
+# se instala solo si se pide explicitamente con EMBED_BACKEND=bge-m3.
+bge = ["sentence-transformers==3.3.1"]
+# OCR de respaldo para el PDF escaneado de Appendicitis/ (sin dependencias de sistema).
+ocr = ["rapidocr-onnxruntime==1.4.4"]
+dev = ["pytest==8.3.4", "pytest-asyncio==0.25.2", "ruff==0.9.2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/postop"]
+
+[tool.ruff]
+# 110 en vez de 100: varias expresiones regulares de las guardas y del triaje
+# pierden legibilidad si se parten a la mitad de una alternancia.
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
