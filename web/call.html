@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Llamada de seguimiento postoperatorio</title>
+<style>
+  :root { --bg:#0f1115; --panel:#171a21; --linea:#262b36; --txt:#e6e9ef; --tenue:#9aa4b2;
+          --verde:#2e9e5b; --amarillo:#c9a227; --rojo:#d64545; --acento:#4a8cff; }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--txt);
+         display:grid; grid-template-columns:1fr 420px; height:100vh }
+  header { grid-column:1/-1; padding:10px 16px; border-bottom:1px solid var(--linea);
+           display:flex; gap:12px; align-items:center }
+  h1 { font-size:15px; margin:0; font-weight:600 }
+  nav a { color:var(--tenue); text-decoration:none; margin-left:14px }
+  nav a:hover { color:var(--txt) }
+  main { padding:16px; overflow-y:auto }
+  aside { border-left:1px solid var(--linea); padding:14px; overflow-y:auto; background:var(--panel) }
+  .fila { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px }
+  select,button { background:#1e2330; color:var(--txt); border:1px solid var(--linea);
+                  border-radius:6px; padding:8px 12px; font:inherit }
+  button { cursor:pointer } button:disabled { opacity:.4; cursor:not-allowed }
+  button.primario { background:var(--acento); border-color:var(--acento); color:#fff }
+  button.peligro { background:var(--rojo); border-color:var(--rojo); color:#fff }
+  #conversacion { display:flex; flex-direction:column; gap:10px }
+  .burbuja { padding:9px 13px; border-radius:10px; max-width:75%; white-space:pre-wrap }
+  .agente { background:#1c2432; align-self:flex-start }
+  .paciente { background:#243026; align-self:flex-end }
+  .sistema { background:#2a2333; align-self:center; font-size:12px; color:var(--tenue) }
+  .seccion { margin-bottom:16px }
+  .seccion h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+                color:var(--tenue); margin:0 0 7px }
+  .slot { display:flex; justify-content:space-between; padding:4px 0;
+          border-bottom:1px solid var(--linea) }
+  .slot .v { color:var(--tenue) } .slot .v.lleno { color:var(--txt); font-weight:600 }
+  .chip { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:600 }
+  .chip.verde{background:var(--verde)} .chip.amarillo{background:var(--amarillo);color:#000}
+  .chip.rojo{background:var(--rojo)}
+  .fuente { font-size:12px; color:var(--tenue); border-left:2px solid var(--acento);
+            padding-left:8px; margin:6px 0 }
+  .metrica { display:flex; justify-content:space-between; font-size:12px; color:var(--tenue) }
+  .aviso { background:#2a2333; border:1px solid var(--linea); border-radius:6px;
+           padding:8px 10px; font-size:12px; color:var(--tenue); margin-bottom:12px }
+  #nivelvoz { height:4px; background:var(--linea); border-radius:2px; overflow:hidden; flex:1;
+              min-width:120px }
+  #nivelvoz i { display:block; height:100%; width:0; background:var(--verde) }
+  code { background:#1e2330; padding:1px 5px; border-radius:4px; font-size:12px }
+</style>
+</head>
+<body>
+<header>
+  <h1>Llamada de seguimiento postoperatorio</h1>
+  <nav><a href="/admin">Consola de conocimiento →</a></nav>
+</header>
+
+<main>
+  <div class="aviso">
+    El micrófono exige contexto seguro: use <code>http://localhost:8080</code>.
+    Desde una IP de red sin HTTPS el navegador lo bloquea.
+  </div>
+  <div class="fila">
+    <select id="paciente"></select>
+    <select id="dia">
+      <option value="1">Día 1</option><option value="3">Día 3</option>
+      <option value="7" selected>Día 7</option><option value="14">Día 14</option>
+    </select>
+    <button id="iniciar" class="primario">Iniciar llamada</button>
+    <button id="colgar" class="peligro" disabled>Colgar</button>
+    <div id="nivelvoz"><i></i></div>
+  </div>
+  <div class="fila">
+    <input id="texto" placeholder="Camino alterno de texto (para depurar sin micrófono)"
+           style="flex:1;min-width:260px;background:#1e2330;color:var(--txt);
+                  border:1px solid var(--linea);border-radius:6px;padding:8px 12px;font:inherit">
+    <button id="enviar" disabled>Enviar</button>
+  </div>
+  <div id="conversacion"></div>
+</main>
+
+<aside>
+  <div class="seccion">
+    <h2>Triaje en vivo</h2>
+    <div id="triaje"><span class="chip verde">sin datos</span></div>
+    <div id="motivos" style="font-size:12px;color:var(--tenue);margin-top:6px"></div>
+  </div>
+  <div class="seccion">
+    <h2>Slots clínicos</h2>
+    <div id="slots"></div>
+  </div>
+  <div class="seccion">
+    <h2>Fuentes citadas</h2>
+    <div id="fuentes" style="font-size:12px;color:var(--tenue)">Ninguna todavía.</div>
+  </div>
+  <div class="seccion">
+    <h2>Latencia del último turno</h2>
+    <div id="latencias"></div>
+  </div>
+</aside>
+
+<script>
+const SLOTS = {dolor_nrs:"Dolor (0-10)", fiebre_c:"Temperatura (°C)", movilidad:"Movilidad",
+               herida:"Herida", apetito:"Apetito", sueno:"Sueño"};
+const $ = s => document.querySelector(s);
+let ws, ctx, fuente, procesador, stream, hablando = false, silencioDesde = 0, enviado = false;
+let colaAudio = [], reproduciendo = false, tasaAgente = 22050, recibiendoAudio = false;
+
+// --- Umbrales del VAD. El de fin de habla (700 ms) es un compromiso: mas corto
+// corta al paciente a mitad de frase, mas largo se siente como que el agente no
+// reacciona. El reto tiene pacientes que dudan y hacen pausas largas.
+const UMBRAL_VOZ = 0.012, MS_FIN_HABLA = 700;
+
+pintarSlots({});
+
+fetch("/api/pacientes").then(r => r.json()).then(d => {
+  $("#paciente").innerHTML = d.pacientes.map(p =>
+    `<option value='${encodeURIComponent(JSON.stringify(p))}'>${p.nombre} — ${p.procedimiento}</option>`
+  ).join("") || "<option>sin dataset</option>";
+});
+
+$("#iniciar").onclick = iniciar;
+$("#colgar").onclick = () => { enviarJSON({tipo:"colgar"}); cerrar(); };
+$("#enviar").onclick = () => {
+  const t = $("#texto").value.trim();
+  if (t) { enviarJSON({tipo:"texto", texto:t}); $("#texto").value = ""; }
+};
+$("#texto").addEventListener("keydown", e => { if (e.key === "Enter") $("#enviar").click(); });
+
+async function iniciar() {
+  ws = new WebSocket(`ws://${location.host}/ws/llamada`);
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = alRecibir;
+  ws.onclose = cerrar;
+  await new Promise(r => ws.onopen = r);
+
+  const sel = $("#paciente").value;
+  enviarJSON({tipo:"iniciar",
+              paciente: sel ? JSON.parse(decodeURIComponent(sel)) : {},
+              dia_postop: parseInt($("#dia").value)});
+
+  try { await abrirMicrofono(); }
+  catch (e) { burbuja("sistema", "Sin micrófono: " + e.message + ". Use el campo de texto."); }
+
+  $("#iniciar").disabled = true; $("#colgar").disabled = false; $("#enviar").disabled = false;
+}
+
+async function abrirMicrofono() {
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: {channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true}
+  });
+  ctx = new AudioContext({sampleRate: 16000});
+  fuente = ctx.createMediaStreamSource(stream);
+  procesador = ctx.createScriptProcessor(4096, 1, 1);
+  fuente.connect(procesador); procesador.connect(ctx.destination);
+
+  procesador.onaudioprocess = e => {
+    const muestras = e.inputBuffer.getChannelData(0);
+    let energia = 0;
+    for (let i = 0; i < muestras.length; i++) energia += muestras[i] * muestras[i];
+    const rms = Math.sqrt(energia / muestras.length);
+    $("#nivelvoz i").style.width = Math.min(100, rms * 900) + "%";
+
+    // Barge-in: si el paciente habla mientras suena el agente, se corta el audio.
+    if (rms > UMBRAL_VOZ && reproduciendo) cortarAudio();
+
+    if (rms > UMBRAL_VOZ) { hablando = true; silencioDesde = 0; enviado = false; }
+    else if (hablando) {
+      if (!silencioDesde) silencioDesde = performance.now();
+      else if (performance.now() - silencioDesde > MS_FIN_HABLA && !enviado) {
+        enviado = true; hablando = false; silencioDesde = 0;
+        enviarJSON({tipo:"fin_habla"});
+        return;
+      }
+    }
+    if (hablando && ws?.readyState === 1) ws.send(aPCM16(muestras));
+  };
+}
+
+function aPCM16(f32) {
+  const salida = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++) {
+    const v = Math.max(-1, Math.min(1, f32[i]));
+    salida[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+  }
+  return salida.buffer;
+}
+
+function alRecibir(ev) {
+  if (ev.data instanceof ArrayBuffer) { colaAudio.push(ev.data); if (!reproduciendo) reproducir(); return; }
+  const m = JSON.parse(ev.data);
+  switch (m.tipo) {
+    case "iniciada": burbuja("sistema", "Llamada " + m.call_id); break;
+    case "agente":
+      burbuja("agente", m.texto + (m.es_guionada ? "" : "  ·  generada"));
+      if (m.latencias && Object.keys(m.latencias).length) pintarLatencias(m.latencias);
+      break;
+    case "paciente": burbuja("paciente", m.texto); break;
+    case "extraccion": pintarSlots(m.slots); break;
+    case "decision": pintarTriaje(m); break;
+    case "guarda": burbuja("sistema", "Guarda activada: " + m.motivo); break;
+    case "respuesta_anclada": pintarFuente(m); break;
+    case "audio_inicio": tasaAgente = m.sample_rate; recibiendoAudio = true; break;
+    case "audio_fin": recibiendoAudio = false; break;
+    case "resumen": burbuja("sistema", "Resumen: triaje " + m.decision.nivel + " · " + m.proximos_pasos); break;
+  }
+}
+
+async function reproducir() {
+  reproduciendo = true;
+  const salida = new AudioContext();
+  while (colaAudio.length) {
+    const crudo = new Int16Array(colaAudio.shift());
+    const buf = salida.createBuffer(1, crudo.length, tasaAgente);
+    const canal = buf.getChannelData(0);
+    for (let i = 0; i < crudo.length; i++) canal[i] = crudo[i] / 32768;
+    const nodo = salida.createBufferSource();
+    nodo.buffer = buf; nodo.connect(salida.destination);
+    await new Promise(r => { nodo.onended = r; nodo.start(); });
+    if (!reproduciendo) break;
+  }
+  reproduciendo = false; salida.close();
+}
+
+function cortarAudio() { colaAudio = []; reproduciendo = false; }
+
+function burbuja(clase, texto) {
+  const d = document.createElement("div");
+  d.className = "burbuja " + clase; d.textContent = texto;
+  $("#conversacion").append(d); d.scrollIntoView({behavior:"smooth", block:"end"});
+}
+
+function pintarSlots(slots) {
+  $("#slots").innerHTML = Object.entries(SLOTS).map(([k, etiqueta]) => {
+    const v = slots?.[k];
+    return `<div class="slot"><span>${etiqueta}</span>
+            <span class="v ${v != null ? "lleno" : ""}">${v ?? "—"}</span></div>`;
+  }).join("");
+}
+
+function pintarTriaje(d) {
+  $("#triaje").innerHTML = `<span class="chip ${d.nivel}">${d.nivel.toUpperCase()}</span>`;
+  $("#motivos").innerHTML = (d.motivos || []).map(m => `• ${m.detalle}`).join("<br>") || "";
+}
+
+function pintarFuente(m) {
+  if (!m.anclada) {
+    $("#fuentes").innerHTML = `<div class="fuente">Sin anclaje: ${m.motivo}. El agente declaró su límite.</div>`
+      + $("#fuentes").innerHTML;
+    return;
+  }
+  $("#fuentes").innerHTML = `<div class="fuente"><b>${m.documento}</b> p.${m.pagina}<br>«${m.cita}»</div>`
+    + $("#fuentes").innerHTML;
+}
+
+function pintarLatencias(l) {
+  $("#latencias").innerHTML = Object.entries(l)
+    .map(([k, v]) => `<div class="metrica"><span>${k}</span><span>${v} ms</span></div>`).join("");
+}
+
+function enviarJSON(o) { if (ws?.readyState === 1) ws.send(JSON.stringify(o)); }
+
+function cerrar() {
+  procesador?.disconnect(); fuente?.disconnect();
+  stream?.getTracks().forEach(t => t.stop()); ctx?.close();
+  $("#iniciar").disabled = false; $("#colgar").disabled = true; $("#enviar").disabled = true;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consola de conocimiento clínico</title>
+<style>
+  :root { --bg:#0f1115; --panel:#171a21; --linea:#262b36; --txt:#e6e9ef; --tenue:#9aa4b2;
+          --verde:#2e9e5b; --rojo:#d64545; --acento:#4a8cff; }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--txt) }
+  header { padding:10px 16px; border-bottom:1px solid var(--linea); display:flex;
+           gap:14px; align-items:center }
+  h1 { font-size:15px; margin:0; font-weight:600 }
+  nav a { color:var(--tenue); text-decoration:none } nav a:hover { color:var(--txt) }
+  main { padding:16px; display:grid; grid-template-columns:1fr 460px; gap:18px; align-items:start }
+  .caja { background:var(--panel); border:1px solid var(--linea); border-radius:8px; padding:14px;
+          margin-bottom:16px }
+  .caja h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--tenue);
+             margin:0 0 10px }
+  table { width:100%; border-collapse:collapse; font-size:13px }
+  th { text-align:left; color:var(--tenue); font-weight:500; font-size:11px;
+       text-transform:uppercase; letter-spacing:.05em; padding:6px 8px;
+       border-bottom:1px solid var(--linea) }
+  td { padding:7px 8px; border-bottom:1px solid var(--linea); vertical-align:top }
+  tr:hover td { background:#1b202b }
+  button,input,select { background:#1e2330; color:var(--txt); border:1px solid var(--linea);
+                        border-radius:6px; padding:8px 12px; font:inherit }
+  button { cursor:pointer } button.primario { background:var(--acento); border-color:var(--acento); color:#fff }
+  button.mini { padding:3px 9px; font-size:12px }
+  button.peligro { background:transparent; border-color:var(--rojo); color:var(--rojo) }
+  .estado { font-size:11px; padding:2px 7px; border-radius:99px; background:#2a3040; color:var(--tenue) }
+  .estado.disponible { background:var(--verde); color:#fff }
+  .estado.error { background:var(--rojo); color:#fff }
+  .fila { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  pre { background:#12151c; border:1px solid var(--linea); border-radius:6px; padding:10px;
+        overflow:auto; font-size:12px; max-height:280px; white-space:pre-wrap }
+  .tenue { color:var(--tenue); font-size:12px }
+  .recibo { border-left:2px solid var(--verde); padding-left:9px; margin-bottom:9px; font-size:12px }
+</style>
+</head>
+<body>
+<header>
+  <h1>Consola de conocimiento clínico</h1>
+  <nav><a href="/call">← Interfaz de llamada</a></nav>
+  <span id="salud" class="tenue" style="margin-left:auto"></span>
+</header>
+
+<main>
+  <div>
+    <div class="caja">
+      <h2>Cargar documento</h2>
+      <div class="fila">
+        <input type="file" id="archivo" accept="application/pdf">
+        <button id="subir" class="primario">Subir e indexar</button>
+        <span id="estadoSubida" class="tenue"></span>
+      </div>
+      <p class="tenue" style="margin:9px 0 0">
+        Al subir un documento cuyo nombre coincide con uno ya cargado, la versión nueva
+        <b>supersede</b> a la anterior: la vieja deja de ser recuperable y queda como historial.
+      </p>
+    </div>
+
+    <div class="caja">
+      <h2>Documentos indexados (<span id="conteo">0</span>) · versión de corpus <span id="version">—</span></h2>
+      <table>
+        <thead><tr><th>Documento</th><th>Escenario</th><th>Estado</th><th>Fragmentos</th><th></th></tr></thead>
+        <tbody id="tabla"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="caja">
+      <h2>Prueba de conocimiento vivo</h2>
+      <p class="tenue" style="margin:0 0 9px">
+        Pregunte algo, borre el documento que lo sustenta y vuelva a preguntar.
+        Sin fragmento que citar, el agente declara su límite.
+      </p>
+      <div class="fila">
+        <input id="pregunta" placeholder="¿Qué dice el protocolo sobre...?" style="flex:1;min-width:200px">
+        <button id="preguntar">Consultar</button>
+      </div>
+      <pre id="respuesta" style="margin-top:10px">—</pre>
+    </div>
+
+    <div class="caja">
+      <h2>Recibos de olvido</h2>
+      <div id="recibos" class="tenue">Ningún borrado todavía.</div>
+    </div>
+
+    <div class="caja">
+      <h2>Llamadas registradas</h2>
+      <div id="llamadas" class="tenue">Ninguna todavía.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+
+async function refrescar() {
+  const d = await (await fetch("/api/documentos")).json();
+  $("#conteo").textContent = d.documentos.length;
+  $("#version").textContent = d.version_corpus;
+  $("#tabla").innerHTML = d.documentos.map(x => `
+    <tr>
+      <td>${escapar(x.nombre)}${x.superseded_by ? ' <span class="tenue">(superseded)</span>' : ''}
+          ${x.error ? `<div class="tenue">${escapar(x.error)}</div>` : ''}</td>
+      <td class="tenue">${x.escenario ?? "—"}</td>
+      <td><span class="estado ${x.estado}">${x.estado}</span> <span class="tenue">v${x.version}</span></td>
+      <td>${x.n_chunks}</td>
+      <td><button class="mini peligro" onclick="borrar('${x.doc_id}')">Eliminar</button></td>
+    </tr>`).join("") || `<tr><td colspan="5" class="tenue">Sin documentos.</td></tr>`;
+
+  const s = await (await fetch("/api/salud")).json();
+  $("#salud").textContent = `modelo ${s.modelo_declarado} · ${s.llm_disponible ? "LLM en línea" : "LLM caído"}`
+    + ` · ${s.chunks} fragmentos · TTS ${s.tts ? "sí" : "no"}`;
+
+  const r = await (await fetch("/api/recibos")).json();
+  if (r.recibos.length) $("#recibos").innerHTML = r.recibos.map(x => `
+    <div class="recibo"><b>${escapar(x.nombre)}</b><br>
+      ${x.chunks_eliminados} fragmentos eliminados · corpus v${x.corpus_version_antes}→v${x.corpus_version_despues}<br>
+      <span class="tenue">sha256 ${x.sha256.slice(0,16)}… · ${x.eliminado_ts}</span></div>`).join("");
+
+  const l = await (await fetch("/api/llamadas")).json();
+  if (l.llamadas.length) $("#llamadas").innerHTML = l.llamadas.map(x => `
+    <div class="recibo"><b>${x.call_id}</b> · ${x.paciente_id ?? "—"} · día ${x.dia_postop ?? "—"}
+      · triaje <b>${x.triaje_final ?? "en curso"}</b> · ${x.n_alertas} alerta(s)</div>`).join("");
+}
+
+$("#subir").onclick = async () => {
+  const f = $("#archivo").files[0];
+  if (!f) return;
+  const fd = new FormData(); fd.append("archivo", f);
+  $("#estadoSubida").textContent = "procesando…";
+  const r = await fetch("/api/documentos", {method:"POST", body:fd});
+  const j = await r.json();
+  $("#estadoSubida").textContent = r.ok
+    ? `${j.estado} · ${j.n_chunks} fragmentos${j.supersede ? " · superseder aplicado" : ""}`
+    : `error: ${j.error ?? j.detail}`;
+  refrescar();
+};
+
+async function borrar(id) {
+  if (!confirm("¿Eliminar el documento del conocimiento del agente?")) return;
+  const r = await fetch("/api/documentos/" + id, {method:"DELETE"});
+  const j = await r.json();
+  alert(`Eliminado. ${j.chunks_eliminados} fragmentos borrados. Corpus v${j.corpus_version_antes} → v${j.corpus_version_despues}.`);
+  refrescar();
+}
+
+$("#preguntar").onclick = async () => {
+  const p = $("#pregunta").value.trim();
+  if (!p) return;
+  $("#respuesta").textContent = "consultando…";
+  const j = await (await fetch("/api/consultar", {
+    method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({pregunta:p})
+  })).json();
+  const r = j.respuesta;
+  $("#respuesta").textContent =
+    `RESPUESTA: ${r.texto}\n\nANCLADA: ${r.anclada}\nMOTIVO: ${r.motivo}\n` +
+    `FUENTE: ${r.documento ?? "—"} p.${r.pagina ?? "—"}\nCITA: ${r.cita || "—"}\n` +
+    `\nFRAGMENTOS RECUPERADOS (${j.pasajes.length}):\n` +
+    j.pasajes.map(x => ` · ${x.documento} p.${x.pagina} [${x.origen}]`).join("\n");
+};
+
+function escapar(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
+
+refrescar(); setInterval(refrescar, 5000);
+</script>
+</body>
+</html>
