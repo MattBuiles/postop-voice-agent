@@ -30,6 +30,8 @@ dependencies = [
 bge = ["sentence-transformers==3.3.1"]
 # OCR de respaldo para el PDF escaneado de Appendicitis/ (sin dependencias de sistema).
 ocr = ["rapidocr-onnxruntime==1.4.4"]
+# Voces colombianas neuronales (TTS_BACKEND=edge). Requiere red; ver tts/edge.py.
+voz-neuronal = ["edge-tts==7.0.0"]
 dev = ["pytest==8.3.4", "pytest-asyncio==0.25.2", "ruff==0.9.2"]
 
 [build-system]

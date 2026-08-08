@@ -35,7 +35,7 @@ from postop.rag import ingest
 from postop.rag.embed import crear_embedder
 from postop.rag.retrieve import Recuperador
 from postop.summary import resumen as resumen_mod
-from postop.tts.voz import SintetizadorVoz
+from postop.tts import crear_sintetizador
 
 WEB = RAIZ / "web"
 MODELOS = RAIZ / "models"
@@ -49,7 +49,7 @@ class Servicios:
         self.embedder = None
         self.recuperador: Recuperador | None = None
         self.llm: ClienteLLM | None = None
-        self.tts: SintetizadorVoz | None = None
+        self.tts = None
         self._stt: Transcriptor | None = None
         self.traza: obs.Traza | None = None
         self.llamadas: dict[str, maquina.EstadoLlamada] = {}
@@ -79,11 +79,17 @@ async def ciclo_de_vida(app: FastAPI):
     svc.llm = ClienteLLM(config.llm_base_url, config.llm_model, timeout=120)
     svc.traza = obs.Traza(config.logs_absoluta)
 
-    voz = MODELOS / "piper" / f"{config.tts_voice}.onnx"
-    if voz.exists():
-        svc.tts = SintetizadorVoz(voz, cache_dir=MODELOS / "cache_tts")
+    try:
+        svc.tts = crear_sintetizador(
+            config.tts_backend, config.tts_voice,
+            modelos=MODELOS, cache_dir=MODELOS / "cache_tts",
+        )
+    except Exception as exc:  # noqa: BLE001 - sin voz la app sigue siendo util
+        print(f"  aviso: no se pudo cargar el backend de voz '{config.tts_backend}': {exc}")
+    if svc.tts:
         # Pre-sintetizar aqui es lo que deja los turnos guionados en 0 ms de TTS.
-        await asyncio.to_thread(svc.tts.precalentar, maquina.frases_pre_sintetizables())
+        nuevas = await asyncio.to_thread(svc.tts.precalentar, maquina.frases_pre_sintetizables())
+        print(f"  voz {config.tts_backend}/{config.tts_voice}: {nuevas} frases pre-sintetizadas")
 
     # Cargar el modelo en memoria antes de la primera llamada. Sin esto, el
     # primer turno hablado paga la carga completa (medido: 17,2 s), y ese es
@@ -136,6 +142,8 @@ async def salud():
         "modelos_instalados": modelos,
         "embed_model": config.embed_model,
         "tts": bool(svc.tts),
+        "tts_backend": config.tts_backend,
+        "tts_voice": config.tts_voice,
         "perfil_triaje": config.triage_profile,
         "chunks": n_chunks,
         "version_corpus": store.version_corpus(svc.conn),

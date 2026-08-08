@@ -56,6 +56,8 @@ class Config(BaseSettings):
 
     asr_backend: str = "faster-whisper"
     asr_model: str = "small"
+    # piper = local y sin red | edge = voces colombianas neuronales, requiere red
+    tts_backend: str = "piper"
     tts_voice: str = "es_MX-claude-high"
 
     triage_profile: str = "conservative"
