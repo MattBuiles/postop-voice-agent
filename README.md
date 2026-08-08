@@ -59,22 +59,29 @@ quiere verificar: `make index`.
 en la arquitectura de dos niveles (`LLM_EXTRACTOR_MODEL`). Ambos están en la
 lista permitida del reto.
 
-**Por qué local y no en la nube — el hallazgo que condicionó todo el diseño:**
+El reto permite cuatro **familias** de modelos: Google Gemini gama Flash y Meta
+Llama vía Groq en la nube, y Meta Llama serie 3.x (1B–3B) o Microsoft Phi Mini
+serie 3.5+ en local. `llama3.2:3b` pertenece a la tercera.
 
-| Modelo permitido | Estado verificado (7-ago-2026) |
+**Por qué local y no en la nube:**
+
+| Opción | Estado verificado (7-ago-2026) |
 |---|---|
-| Gemini 1.5 Flash | Retirado. No aparece en la documentación viva de la API de Gemini |
-| Llama 3.1 70B vía Groq | `llama-3.1-70b-versatile` **deprecado el 24-ene-2025**; las peticiones devuelven error |
-| **Llama 3.2 (1B/3B)** | ✅ Disponible, sin dependencia de proveedor |
-| Phi-3.5 Mini | ✅ Disponible |
+| Gemini 1.5 Flash | Retirado; hay que usar la generación Flash vigente |
+| Llama 3.1 70B en Groq | `llama-3.1-70b-versatile` deprecado el 24-ene-2025; hay que usar el sucesor vigente de la familia |
+| **Llama 3.2 (1B/3B) local** | Disponible, sin depender de que un proveedor lo retire |
+| Phi Mini local | Disponible |
 
-Dos de las cuatro opciones ya no se sirven. La trampa está en que el reemplazo
-natural de Groq es `llama-3.3-70b-versatile`, que **no está en la lista** y por lo
-tanto descalifica. Un modelo local es el único camino que garantiza que el jurado
-ejecute exactamente lo mismo que nosotros, hoy y dentro de seis meses.
+Los snapshots concretos que nombraba el material del reto ya no se sirven. El
+propio documento de stack lo contempla y admite el sucesor vigente de la misma
+familia y proveedor, así que la nube sigue siendo una opción legítima. Se
+descartó igualmente por **reproducibilidad**: un modelo local garantiza que el
+jurado ejecute exactamente lo mismo que nosotros, hoy y dentro de seis meses, sin
+límites de peticiones ni dependencia de red en una sesión cronometrada.
 
-`src/postop/config.py` **falla el arranque** si se configura un modelo fuera de la
-lista permitida. La compuerta se defiende con código, no con disciplina.
+`src/postop/config.py` **falla el arranque** si el modelo configurado no pertenece
+a ninguna de las familias permitidas. La compuerta se defiende con código, no con
+disciplina.
 
 ---
 

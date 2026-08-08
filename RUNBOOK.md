@@ -198,13 +198,16 @@ Luego crea el repositorio **público** en GitHub con licencia MIT.
 | 5:00–6:30 | **Pregunta 1** frente a cámara |
 | 6:30–8:30 | **Pregunta 2** frente a cámara |
 
-**Para la Pregunta 2, la decisión técnica más fuerte es la elección de modelo:**
-dos de las cuatro opciones permitidas están retiradas por sus proveedores
-(Gemini 1.5 Flash ya no se sirve; Llama 3.1 70B devuelve error en Groq desde
-enero de 2025). El reemplazo natural, `llama-3.3-70b`, **no está en la lista y
-descalifica**. De ahí el modelo local, y de ahí que la arquitectura se rediseñara
-para que un 3B bastara: el modelo no decide el triaje, solo extrae seis campos
-tipados bajo esquema forzado.
+**Para la Pregunta 2, la decisión técnica más fuerte es la elección de modelo.**
+El reto permite cuatro familias, no versiones exactas, y admite el sucesor vigente
+cuando un proveedor retira un snapshot — cosa que ya pasó con dos de los modelos
+que nombraba el material (Gemini 1.5 Flash y Llama 3.1 70B en Groq).
+
+El argumento no es que la nube estuviera prohibida: es que era **frágil**. Un
+modelo local elimina la dependencia de que un proveedor mantenga un snapshot, los
+límites de peticiones por minuto y la red en una sesión cronometrada. Y de ahí que
+la arquitectura se rediseñara para que un 3B bastara: el modelo no decide el
+triaje, solo extrae seis campos tipados bajo esquema forzado.
 
 Riesgos que conviene reconocer en cámara (reconocerlos suma, ocultarlos resta):
 la regla de triaje está calibrada sobre 160 casos sintéticos y probablemente

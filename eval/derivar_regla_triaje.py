@@ -27,7 +27,7 @@ def load_sheet(path: Path) -> list[dict]:
     sheet = workbook[workbook.sheetnames[0]]
     rows = list(sheet.iter_rows(values_only=True))
     header = list(rows[0])
-    return [dict(zip(header, row)) for row in rows[1:]]
+    return [dict(zip(header, row, strict=False)) for row in rows[1:]]
 
 
 def triage(trayectoria: dict, profile: str = "conservative") -> str:

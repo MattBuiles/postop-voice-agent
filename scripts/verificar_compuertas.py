@@ -56,12 +56,14 @@ def main() -> int:
         print("  Levántala con `make run` y vuelve a intentar.")
         return 1
 
-    from postop.config import MODELOS_PERMITIDOS
+    from postop.config import familia_de
 
     modelo = salud["modelo_declarado"]
+    familia = familia_de(modelo)
     aprobadas.append(resultado(
-        modelo in MODELOS_PERMITIDOS, "G3 modelo permitido",
-        f"{modelo} {'está' if modelo in MODELOS_PERMITIDOS else 'NO está'} en la lista del reto",
+        familia is not None, "G3 modelo permitido",
+        f"{modelo} pertenece a: {familia}" if familia
+        else f"{modelo} NO pertenece a ninguna familia permitida",
     ))
 
     # --- G4: la voz funciona de punta a punta ---

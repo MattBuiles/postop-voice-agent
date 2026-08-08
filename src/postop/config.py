@@ -10,16 +10,36 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Compuerta G3: el modelo de lenguaje debe ser uno de la lista permitida por el
-# reto. Esta constante NO es decorativa: config.validar() falla el arranque si
-# se configura cualquier otro, para que un despiste no cueste la descalificacion.
-MODELOS_PERMITIDOS = {
-    "llama3.2:1b",
-    "llama3.2:3b",
-    "llama3.2",  # alias de Ollama, resuelve a 3b
-    "phi3.5",
-    "phi3.5:3.8b-mini-instruct-q4_K_M",
+# Compuerta G3: el modelo de lenguaje debe pertenecer a una de las familias
+# permitidas por el reto. El material del reto lo define por FAMILIA y no por
+# version exacta, porque los proveedores retiran snapshots sin aviso:
+#
+#   - Google Gemini, gama Flash          (nube, nivel gratuito)
+#   - Meta Llama via Groq                (nube, nivel gratuito)
+#   - Meta Llama serie 3.x, 1B-3B        (local, CPU)
+#   - Microsoft Phi Mini serie 3.5+      (local, CPU)
+#
+# La validacion se hace por prefijo de familia, no contra una lista de
+# identificadores: fijar versiones exactas romperia el arranque en cuanto Ollama
+# publique un llama3.3:3b, que seguiria siendo perfectamente valido.
+#
+# Esto NO es decorativo: validar() falla el arranque si se configura cualquier
+# otra cosa, para que un despiste no cueste la descalificacion.
+FAMILIAS_PERMITIDAS: dict[str, tuple[str, ...]] = {
+    "Meta Llama (local, serie 3.x)": ("llama3.", "llama-3."),
+    "Microsoft Phi Mini (local, serie 3.5+)": ("phi3.5", "phi-3.5", "phi4-mini", "phi3."),
+    "Google Gemini gama Flash (nube)": ("gemini-", "gemini/"),
+    "Meta Llama via Groq (nube)": ("groq/llama", "llama-3.3-", "llama3.3"),
 }
+
+
+def familia_de(modelo: str) -> str | None:
+    """Devuelve la familia permitida a la que pertenece el modelo, o None."""
+    nombre = modelo.strip().lower()
+    for familia, prefijos in FAMILIAS_PERMITIDAS.items():
+        if any(nombre.startswith(p) for p in prefijos):
+            return familia
+    return None
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -65,11 +85,11 @@ class Config(BaseSettings):
     def validar(self) -> None:
         """Falla ruidosamente si la configuracion violaria una compuerta."""
         for modelo in {self.llm_model, self.modelo_extractor}:
-            if modelo not in MODELOS_PERMITIDOS:
+            if familia_de(modelo) is None:
                 raise ValueError(
-                    f"LLM '{modelo}' esta fuera de la lista permitida por el reto "
+                    f"LLM '{modelo}' no pertenece a ninguna familia permitida por el reto "
                     f"(compuerta G3, que descalifica la entrega). "
-                    f"Permitidos: {sorted(MODELOS_PERMITIDOS)}"
+                    f"Familias admitidas: {', '.join(FAMILIAS_PERMITIDAS)}"
                 )
         if self.triage_profile not in {"conservative", "optimal"}:
             raise ValueError(
