@@ -145,7 +145,7 @@ propio README al pie de la letra y con cronómetro:
 
 ```bash
 cd /tmp && rm -rf prueba-g2
-git clone <TU-REPO> prueba-g2 && cd prueba-g2
+git clone https://github.com/MattBuiles/postop-voice-agent.git prueba-g2 && cd prueba-g2
 cp .env.example .env
 time docker compose up
 ```

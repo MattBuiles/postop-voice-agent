@@ -15,7 +15,7 @@ cuándo escalar a personal humano.
 ### Opción A — Docker (un comando)
 
 ```bash
-git clone <URL-DE-ESTE-REPO> && cd postop-voice-agent
+git clone https://github.com/MattBuiles/postop-voice-agent.git && cd postop-voice-agent
 cp .env.example .env
 docker compose up
 ```
