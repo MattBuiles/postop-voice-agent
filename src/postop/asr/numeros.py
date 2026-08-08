@@ -156,6 +156,24 @@ def extraer_dolor(texto: str) -> Medicion | None:
             if RANGO_DOLOR[0] <= valor <= RANGO_DOLOR[1]:
                 return Medicion(valor, coincidencia.group(0).strip(), True)
 
+    # Numero escrito en palabra y suelto: "mas o menos uno", "por ahi tres".
+    #
+    # Falta este patron costo un slot en una llamada real: el paciente dijo "mas
+    # o menos uno" dos veces y el dolor quedo sin establecer.
+    #
+    # El "uno" impersonal del habla colombiana ("uno ya sabe como es esto") no es
+    # una cifra, asi que se excluye cuando le sigue un verbo o adverbio tipico de
+    # esa construccion.
+    coincidencia = re.search(
+        r"\b(cero|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b"
+        r"(?!\s+(ya|se|nunca|siempre|sabe|piensa|cree|dice|tiene|esta|va|no\s+sabe|no\s+puede))",
+        plano,
+    )
+    if coincidencia:
+        valor = float(UNIDADES[coincidencia.group(1)])
+        if RANGO_DOLOR[0] <= valor <= RANGO_DOLOR[1]:
+            return Medicion(valor, coincidencia.group(0).strip(), True)
+
     # Ultimo recurso: un numero suelto de un digito en un turno sobre dolor.
     coincidencia = re.search(r"\b(\d)\b", plano)
     if coincidencia:

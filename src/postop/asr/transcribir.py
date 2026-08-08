@@ -18,6 +18,15 @@ from pathlib import Path
 
 import numpy as np
 
+# Por debajo de esta log-probabilidad media, la transcripcion no es de fiar.
+#
+# Medido en una llamada real: ante habla poco clara Whisper devolvio "Nada, no
+# podios cancelir ni hormignada", y el modelo extrajo de ahi que el sueno era
+# `normal`. Adivinar un slot a partir de ruido es peor que no tener el slot: el
+# sistema ya sabe escalar por incertidumbre, pero no puede corregir un dato falso
+# que da por bueno.
+UMBRAL_CONFIANZA = -0.85
+
 SESGO_DOMINIO = (
     "Llamada de seguimiento tras una cirugía. El paciente habla español colombiano y "
     "describe sus síntomas: dolor del cero al diez, fiebre, temperatura en grados, "
@@ -34,11 +43,17 @@ class Transcripcion:
     ms: float
     probabilidad_media: float
 
+    @property
+    def fiable(self) -> bool:
+        """False cuando el reconocedor estaba adivinando."""
+        return self.probabilidad_media >= UMBRAL_CONFIANZA
+
     def to_dict(self) -> dict:
         return {
             "texto": self.texto,
             "ms": round(self.ms, 1),
             "confianza": round(self.probabilidad_media, 3),
+            "fiable": self.fiable,
         }
 
 
@@ -73,12 +88,42 @@ class Transcriptor:
             partes.append(segmento.text)
             probabilidades.append(getattr(segmento, "avg_logprob", 0.0))
 
+        texto = " ".join(p.strip() for p in partes).strip()
+        if _es_eco_del_sesgo(texto):
+            # Ante silencio o ruido, Whisper devuelve trozos de su propio
+            # initial_prompt. Sin este filtro aparecia como si el paciente
+            # hubiera dicho "El paciente habla del cero al diez, fiebre,".
+            texto = ""
+
         return Transcripcion(
-            texto=" ".join(p.strip() for p in partes).strip(),
+            texto=texto,
             idioma=info.language,
             ms=(time.perf_counter() - inicio) * 1000,
             probabilidad_media=float(np.mean(probabilidades)) if probabilidades else 0.0,
         )
+
+
+_PALABRAS_SESGO = {
+    p for p in "".join(c if c.isalnum() or c.isspace() else " " for c in SESGO_DOMINIO.lower()).split()
+    if len(p) > 3
+}
+
+
+def _es_eco_del_sesgo(texto: str) -> bool:
+    """¿La transcripcion es en realidad el prompt de sesgo devuelto por Whisper?
+
+    Con audio en silencio o con solo ruido, Whisper tiende a "alucinar" el
+    contenido de su initial_prompt. Se descarta cuando casi todas sus palabras
+    salen de ese prompt y no aporta nada nuevo.
+    """
+    palabras = [
+        p for p in "".join(c if c.isalnum() or c.isspace() else " " for c in texto.lower()).split()
+        if len(p) > 3
+    ]
+    if len(palabras) < 3:
+        return False
+    del_sesgo = sum(1 for p in palabras if p in _PALABRAS_SESGO)
+    return del_sesgo / len(palabras) >= 0.8
 
 
 def pcm16_a_float32(datos: bytes) -> np.ndarray:

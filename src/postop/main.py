@@ -107,6 +107,19 @@ async def ciclo_de_vida(app: FastAPI):
         for modelo, ms in tiempos.items():
             print(f"  modelo {modelo} precalentado en {ms:.0f} ms")
 
+        # Y una extraccion REAL, con su esquema y sus ejemplos.
+        #
+        # El precalentado de arriba manda una peticion trivial y sin esquema, asi
+        # que la primera extraccion de verdad seguia pagando la compilacion de la
+        # gramatica de salida estructurada y el prellenado del prompt completo.
+        # Medido en una llamada real: 17.996 ms en el primer turno con modelo,
+        # frente a 1.191-4.674 ms en los siguientes.
+        _t0 = _time.perf_counter()
+        await extraer(svc.llm, "Me muevo despacito pero camino", "movilidad",
+                      modelo=config.modelo_extractor)
+        print(f"  gramatica de extraccion compilada en "
+              f"{(_time.perf_counter() - _t0) * 1000:.0f} ms")
+
     yield
 
     if svc.llm:
@@ -372,6 +385,7 @@ async def _procesar_turno(ws, estado, audio, evento, enviar_agente, texto_direct
     crono = obs.Cronometro()
     crono.arrancar()
 
+    fiable = True
     if texto_directo:
         texto = texto_directo.strip()
         confianza = 1.0
@@ -383,11 +397,33 @@ async def _procesar_turno(ws, estado, audio, evento, enviar_agente, texto_direct
         crono.marcar("stt")
         texto = transcripcion.texto
         confianza = transcripcion.probabilidad_media
+        fiable = transcripcion.fiable
 
     if not texto:
         return
 
-    await ws.send_json({"tipo": "paciente", "texto": texto, "confianza": confianza})
+    await ws.send_json({"tipo": "paciente", "texto": texto, "confianza": confianza,
+                        "fiable": fiable})
+
+    # Transcripcion poco fiable: se repregunta en vez de extraer un slot de lo
+    # que probablemente es ruido. La maquina de estados ya cuenta el intento, asi
+    # que dos seguidas escalan por incertidumbre en lugar de asumir normalidad.
+    if not fiable:
+        svc.traza.escribir(estado.call_id, "transcripcion_dudosa",
+                           {"texto": texto, "confianza": confianza})
+        slot_pendiente = estado.slot_actual
+        if slot_pendiente:
+            estado.intentos[slot_pendiente] = estado.intentos.get(slot_pendiente, 0) + 1
+            if estado.intentos[slot_pendiente] >= maquina.MAX_INTENTOS_POR_SLOT:
+                estado.agotados.append(slot_pendiente)
+                estado.indice_slot += 1
+        await enviar_agente(
+            maquina.AccionAgente("Perdón, no le escuché bien. ¿Me lo repite, por favor?",
+                                 estado.fase, estado.slot_actual, True,
+                                 nota="transcripción poco fiable"),
+            crono.to_dict(), crono,
+        )
+        return
 
     hablante = "tercero" if maquina.es_tercero(texto) else "paciente"
     if hablante == "tercero":

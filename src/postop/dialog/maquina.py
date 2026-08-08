@@ -270,7 +270,9 @@ def backchannel(segundos_de_silencio: float) -> str | None:
 
 def frases_pre_sintetizables() -> list[str]:
     """Todo el texto fijo del agente, para generar su audio al arrancar."""
-    frases = [SALUDO, INTERRUPCION_ROJO, guardas.RESPUESTA_INYECCION, guardas.RESPUESTA_PRESCRIPCION]
+    frases = [SALUDO, INTERRUPCION_ROJO, guardas.RESPUESTA_INYECCION,
+              guardas.RESPUESTA_PRESCRIPCION,
+              "Perdón, no le escuché bien. ¿Me lo repite, por favor?"]
     frases.extend(PREGUNTAS.values())
     frases.extend(REPREGUNTAS.values())
     frases.extend(CIERRES.values())
