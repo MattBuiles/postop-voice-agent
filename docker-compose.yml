@@ -1,0 +1,59 @@
+# Levantamiento completo en un comando: `docker compose up`.
+#
+# La compuerta G2 cronometra 15 minutos desde el README hasta la solucion
+# corriendo. Dos decisiones de este archivo existen para eso:
+#   - el indice vectorial viaja pre-construido en data/knowledge.db, asi que
+#     nadie espera a que se reindexen 107 PDFs;
+#   - el unico peso que se descarga es el del modelo de lenguaje (~2 GB), y se
+#     hace en un servicio aparte que arranca en paralelo con la aplicacion.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: postop_ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  # Descarga el modelo permitido y termina. La aplicacion espera a que complete
+  # para no atender una llamada con un modelo a medio bajar.
+  modelo:
+    image: ollama/ollama:latest
+    container_name: postop_modelo
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "ollama pull ${LLM_MODEL:-llama3.2:3b}"
+    restart: "no"
+
+  app:
+    build: .
+    container_name: postop_app
+    depends_on:
+      modelo:
+        condition: service_completed_successfully
+    environment:
+      LLM_BASE_URL: http://ollama:11434
+      LLM_MODEL: ${LLM_MODEL:-llama3.2:3b}
+      DB_PATH: /app/data/knowledge.db
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
