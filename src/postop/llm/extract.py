@@ -149,20 +149,36 @@ _PISO_HERIDA: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 # Negaciones que invalidan el piso: "ni rojo ni hinchada", "nada de pus".
-_NEGACION_HERIDA = re.compile(
-    r"\b(ni|sin|nada de|no (le )?(sale|tiene|hay|est[aá])|no se ve)\s+\w{0,12}\s*"
-    r"(roj\w+|colorad\w+|hinchad\w+|inflamad\w+|pus|materia|secreci[oó]n)",
-    re.I,
+#
+# Antes esto era una sola expresion que exigia la negacion y el sintoma casi
+# pegados (hasta 12 caracteres sin espacios). Fallaba con la forma mas natural de
+# negar en espanol coloquial: "nada de esas cosas de pus" -- catorce caracteres y
+# tres palabras de por medio. El paciente decia explicitamente que NO tenia pus y
+# el sistema lo marcaba como secrecion purulenta, que dispara ROJO.
+#
+# Ahora se busca una senal de negacion en las palabras PREVIAS al sintoma, que es
+# como funciona la negacion en el habla real.
+_CUES_NEGACION = re.compile(
+    r"\b(ni|sin|nada|no|nunca|jam[aá]s|tampoco|ning[uú]n\w*)\b", re.I
 )
+PALABRAS_VENTANA_NEGACION = 6
+
+
+def _esta_negado(texto: str, inicio: int) -> bool:
+    """¿El sintoma que empieza en `inicio` viene precedido de una negacion?"""
+    previo = texto[:inicio].split()[-PALABRAS_VENTANA_NEGACION:]
+    return bool(_CUES_NEGACION.search(" ".join(previo)))
 
 
 def _piso_herida(texto: str) -> str | None:
-    """Severidad minima de la herida deducible del texto, o None."""
+    """Severidad minima de la herida deducible del texto, o None.
+
+    Solo puede SUBIR lo que dijo el modelo, nunca bajarlo: misma asimetria que
+    gobierna el resto del sistema.
+    """
     for patron, valor in _PISO_HERIDA:
         for coincidencia in patron.finditer(texto):
-            # Se descarta la mencion si aparece dentro de una negacion cercana.
-            ventana = texto[max(0, coincidencia.start() - 40) : coincidencia.end()]
-            if not _NEGACION_HERIDA.search(ventana):
+            if not _esta_negado(texto, coincidencia.start()):
                 return valor
     return None
 

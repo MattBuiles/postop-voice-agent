@@ -28,3 +28,6 @@ PLAN-MAESTRO.md
 
 # Muestras de voz para comparar: se regeneran con scripts/generar_pdf_demo.py
 demo/voces/
+
+# Audio sintetizado para el banco de ASR: se regenera solo.
+eval/audio_bench/

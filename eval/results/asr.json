@@ -1,0 +1,107 @@
+[
+  {
+    "tamano": "tiny",
+    "ms_carga": 955,
+    "ms_mediana": 487,
+    "ms_p95": 535,
+    "wer": 0.1639,
+    "textos": [
+      "Me tomé la temperatura y salió como en 38, pero eso es ser del calor de acá no más, doctora.",
+      "La verdad el dolor ha sido más bien un uno, apenas enotas, casi nada.",
+      "Hay, no, más o menos no más, un dolorcito hay normal de la operación. Si acaso un 6.",
+      "No, fiebre no es sentido, me tome la temperatura y está normalita, 36 y algo.",
+      "Se ve un poquito rojita y en el borde, pero nada esas cosas de pus ni nada arraro.",
+      "La vista tranquila, normalita, sin nada arraro, ni rojo, ni encha ni consecreción.",
+      "Pues como poquito, se me inquita o las ganas, casi no me pasa nada.",
+      "Un poco bajo pero ahí vamos, un poquito menos de lo normal.",
+      "Me muevo espacito, como es de esperarse por la cirugía, pero camino.",
+      "Casino pego el ojo en toda la noche, doctor."
+    ],
+    "slots_ok": 7,
+    "slots_total": 10,
+    "fallos": [
+      {
+        "slot": "herida",
+        "esperado": "eritema_leve",
+        "obtenido": "secrecion_purulenta",
+        "oyo": "Se ve un poquito rojita y en el borde, pero nada esas cosas de pus ni nada arraro."
+      },
+      {
+        "slot": "apetito",
+        "esperado": "muy_disminuido",
+        "obtenido": "levemente_disminuido",
+        "oyo": "Pues como poquito, se me inquita o las ganas, casi no me pasa nada."
+      },
+      {
+        "slot": "sueno",
+        "esperado": "muy_alterado",
+        "obtenido": "normal",
+        "oyo": "Casino pego el ojo en toda la noche, doctor."
+      }
+    ]
+  },
+  {
+    "tamano": "base",
+    "ms_carga": 715,
+    "ms_mediana": 661,
+    "ms_p95": 679,
+    "wer": 0.2098,
+    "textos": [
+      "Me tomé la temperatura y salió como en 38, pero eso es ser del calor de acá nomás, doctora.",
+      "La verdad el dolor ha sido más bien un uno, apenas enota, casi nada.",
+      "hay, no, más o menos no más, un dolorcito hay normal de la operación. si acaso un seis.",
+      "No, fiebre no es sentido, me tomé la temperatura y estaba normalita, 36 y algo.",
+      "Se ve un poquito rojita y en el borde, pero nada esas cosas de puznina raro.",
+      "La ha visto tranquila, normalita, sin nada raro, ni rojo ni hinchan y consecreción.",
+      "Pues como poquito, se me han quitado las ganas, casi no me pasa nada.",
+      "Un poco bajo pero ahí vamos, un poquito menos de lo normal.",
+      "Me muevo espacito, como es desperarse por la cirugía, pero camino.",
+      "Casi no peguelo junto a la noche, doctor."
+    ],
+    "slots_ok": 9,
+    "slots_total": 10,
+    "fallos": [
+      {
+        "slot": "apetito",
+        "esperado": "muy_disminuido",
+        "obtenido": "levemente_disminuido",
+        "oyo": "Pues como poquito, se me han quitado las ganas, casi no me pasa nada."
+      }
+    ]
+  },
+  {
+    "tamano": "small",
+    "ms_carga": 2080,
+    "ms_mediana": 1868,
+    "ms_p95": 2360,
+    "wer": 0.081,
+    "textos": [
+      "Me tomé la temperatura y salió como en 38, pero eso debe ser del calor de acá no más, doctora.",
+      "La verdad el dolor ha sido más bien un uno, apenas se nota, casi nada.",
+      "Ay, no, más o menos no más, un dolorcito ahí normal de la operación. Si acaso un seis.",
+      "No, fiebre no es sentido, me tomé la temperatura y estaba normalita, 36 y algo.",
+      "Se ve un poquito rojita y en el borde, pero nada de esas cosas de pus ni nada raro.",
+      "La vista tranquila, normalita, sin nada raro, ni rojo, ninchada ni consecreción.",
+      "Pues como poquito, se me han quitado las ganas, casi no me pasa nada.",
+      "Un poco bajo pero ahí vamos, un poquito menos de lo normal.",
+      "Me muevo despacito, como es de esperarse por la cirugía, pero camino.",
+      "Casi no pegó el ojo en toda la noche, doctor."
+    ],
+    "slots_ok": 8,
+    "slots_total": 10,
+    "fallos": [
+      {
+        "slot": "herida",
+        "esperado": "eritema_leve",
+        "obtenido": "secrecion_purulenta",
+        "oyo": "Se ve un poquito rojita y en el borde, pero nada de esas cosas de pus ni nada raro."
+      },
+      {
+        "slot": "apetito",
+        "esperado": "muy_disminuido",
+        "obtenido": "levemente_disminuido",
+        "oyo": "Pues como poquito, se me han quitado las ganas, casi no me pasa nada."
+      }
+    ]
+  }
+]
