@@ -8,6 +8,12 @@ cuándo escalar a personal humano.
 
 **Corre entero en local, sin una sola credencial y con costo cero.**
 
+| Entregable | Enlace |
+|---|---|
+| **Video (demo + preguntas de cierre)** | ⚠️ _PENDIENTE — pegar aquí la URL de YouTube (modo oculto)_ |
+| Diagrama de arquitectura y flujo de decisión | [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) |
+| Informe final | [`docs/INFORME-FINAL.md`](docs/INFORME-FINAL.md) |
+
 ---
 
 ## Arranque rápido
