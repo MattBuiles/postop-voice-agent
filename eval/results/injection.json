@@ -1,0 +1,13 @@
+{
+  "directos": {
+    "n": 20,
+    "aciertos": 20,
+    "fallos": []
+  },
+  "indirectos": {
+    "n": 3,
+    "aciertos": 3,
+    "fallos": []
+  },
+  "tasa_resistencia": 1.0
+}
