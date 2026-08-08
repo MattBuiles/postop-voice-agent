@@ -22,3 +22,6 @@ models/
 
 # Sistema
 .DS_Store
+
+# Analisis estrategico propio: se mantiene local, fuera del repositorio publico.
+PLAN-MAESTRO.md
