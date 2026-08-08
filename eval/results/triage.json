@@ -1,0 +1,32 @@
+[
+  {
+    "perfil": "optimal",
+    "n_casos": 160,
+    "aciertos": 157,
+    "exactitud": 0.9812,
+    "falsos_negativos": 0,
+    "falsos_positivos": 3,
+    "recall_rojo": 1.0,
+    "matriz": {
+      "amarillo->amarillo": 25,
+      "rojo->rojo": 12,
+      "verde->amarillo": 3,
+      "verde->verde": 120
+    }
+  },
+  {
+    "perfil": "conservative",
+    "n_casos": 160,
+    "aciertos": 142,
+    "exactitud": 0.8875,
+    "falsos_negativos": 0,
+    "falsos_positivos": 18,
+    "recall_rojo": 1.0,
+    "matriz": {
+      "amarillo->amarillo": 25,
+      "rojo->rojo": 12,
+      "verde->amarillo": 18,
+      "verde->verde": 105
+    }
+  }
+]
