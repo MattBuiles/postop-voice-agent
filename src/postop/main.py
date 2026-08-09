@@ -147,11 +147,20 @@ async def ciclo_de_vida(app: FastAPI):
         # esto, los tres primeros turnos de una llamada pagan cuatro segundos
         # cada uno.
         _t0 = _time.perf_counter()
-        for _slot in SLOTS_EXTRACCION:
-            await extraer(svc.llm, "no sé, más o menos", _slot,
-                          modelo=config.modelo_extractor)
-        print(f"  gramaticas de extraccion compiladas ({len(SLOTS_EXTRACCION)} slots) en "
-              f"{(_time.perf_counter() - _t0) * 1000:.0f} ms")
+        try:
+            for _slot in SLOTS_EXTRACCION:
+                await extraer(svc.llm, "no sé, más o menos", _slot,
+                              modelo=config.modelo_extractor)
+            print(f"  gramaticas de extraccion compiladas ({len(SLOTS_EXTRACCION)} slots) en "
+                  f"{(_time.perf_counter() - _t0) * 1000:.0f} ms")
+        except Exception as exc:  # noqa: BLE001
+            # Un precalentado fallido NO puede impedir el arranque. Ocurrio con
+            # un Ollama vivo pero sin el modelo descargado: la aplicacion moria
+            # entera y no quedaba ni la consola para diagnosticar el problema.
+            # Los primeros turnos seran mas lentos; eso es todo.
+            print(f"  aviso: no se pudieron precalentar las gramaticas "
+                  f"({type(exc).__name__}). ¿Esta descargado {config.llm_model}? "
+                  f"Los primeros turnos seran mas lentos.")
 
         latido = asyncio.create_task(_latido_modelo())
         print(f"  latido cada {SEGUNDOS_ENTRE_LATIDOS // 60} min para que el modelo no se descargue")
