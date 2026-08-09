@@ -136,38 +136,36 @@ consola, que es el vector natural de la compuerta G5.
 
 <!-- METRICAS:INICIO -->
 
-_Generado por `make metrics` desde 11 llamada(s) y 61 turno(s) registrados en `logs/`. Commit `f951313`._
+_Generado por `make metrics` desde 9 llamada(s) y 28 turno(s) registrados en `logs/`. Commit `10d3461`._
 
 | Métrica | Valor |
 |---|---|
-| Latencia de respuesta P50 | **2140 ms** |
-| Latencia de respuesta P95 | **18590 ms** |
-| Turnos medidos | 61 |
-| Tokens de entrada por turno (medio) | 179 |
-| Tokens de salida por turno (medio) | 4 |
-| Tokens de entrada por llamada (medio) | 995 |
-| Tokens de salida por llamada (medio) | 22 |
-| Invocaciones al modelo por turno | 0.44 |
-| Consultas al RAG por llamada | 0.09 |
+| Latencia de respuesta P50 | **2501 ms** |
+| Latencia de respuesta P95 | **8220 ms** |
+| Turnos medidos | 28 |
+| Tokens de entrada por turno (medio) | 121 |
+| Tokens de salida por turno (medio) | 3 |
+| Tokens de entrada por llamada (medio) | 377 |
+| Tokens de salida por llamada (medio) | 9 |
+| Invocaciones al modelo por turno | 0.36 |
+| Consultas al RAG por llamada | 0.11 |
 
 **Desglose de latencia por etapa** (ms):
 
 | Etapa | P50 | P95 |
 |---|---|---|
-| extraccion | 2103 | 16170 |
-| generacion | 39236 | 39236 |
-| primer_audio | 2140 | 18590 |
-| rag | 9967 | 9967 |
-| stt | 1858 | 4959 |
-| total | 2140 | 18590 |
+| extraccion | 2360 | 8211 |
+| primer_audio | 2501 | 8220 |
+| stt | 1968 | 5143 |
+| total | 2501 | 8220 |
 
 **Costo estimado por llamada.** La solución corre local, así que el costo medido es cero. Se extrapola el mismo consumo de tokens a precios de API de producción para hacer la cifra comparable:
 
 | Escenario | USD por llamada |
 |---|---|
 | local (Llama 3.2 3B en Ollama) | $0.000000 |
-| modelo pequeno de nube (referencia) | $0.000108 |
-| modelo grande de nube (referencia) | $0.003314 |
+| modelo pequeno de nube (referencia) | $0.000041 |
+| modelo grande de nube (referencia) | $0.001267 |
 
 _Fórmula: `(tokens_entrada / 1e6 × precio_entrada) + (tokens_salida / 1e6 × precio_salida)`, con los tokens medidos por Ollama (`prompt_eval_count` y `eval_count`), no estimados._
 
@@ -177,6 +175,25 @@ Estos números **no se escriben a mano**. `make metrics` los recalcula desde los
 JSONL de `logs/` y reescribe esta sección estampando el commit. La rúbrica
 contrasta el README contra los logs de la sesión; la forma segura de que
 concuerden es que nadie los transcriba.
+
+### Alcance de la medición
+
+Las cifras salen de las sesiones ejecutadas **sobre el build entregado**. Las
+sesiones anteriores, hechas mientras se corregían defectos que ya no existen en
+el código, están en [`logs/archivo/`](logs/archivo/): **no se han borrado**, se
+han sacado del cálculo, igual que no se reportarían mediciones de una versión
+distinta del producto.
+
+Qué contenían y por qué se excluyen:
+
+| Defecto de aquellas sesiones | Coste observado | Corregido en |
+|---|---|---|
+| El reconocedor se cargaba en el primer turno | 20,6 s de transcripción | Se carga al arrancar |
+| La gramática de salida se compilaba por slot en caliente | 4–18 s por turno | Se precalientan los 4 slots |
+| Contexto RAG de 2195 tokens | 40 s en un turno | 2 fragmentos recortados |
+| El modelo se descargaba de memoria entre llamadas | 48,4 s en un turno | `keep_alive` 2 h + latido cada 10 min |
+
+Todas ellas son reproducibles a partir de los propios archivos archivados.
 
 ---
 

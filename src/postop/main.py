@@ -64,6 +64,24 @@ class Servicios:
 
 svc = Servicios()
 
+# Cada cuanto se toca el modelo para que Ollama no lo descargue.
+#
+# `keep_alive` son 30 minutos, y eso no basta en el escenario real: se levanta la
+# aplicacion, el jurado tarda en conectarse, y el primer turno paga la recarga
+# completa. Medido en una sesion que empezo una hora despues del arranque: 48,4
+# segundos en un turno cuyo equivalente cuesta 1,3 s con el modelo residente.
+SEGUNDOS_ENTRE_LATIDOS = 600
+
+
+async def _latido_modelo() -> None:
+    """Mantiene el modelo residente mientras la aplicacion este viva."""
+    while True:
+        await asyncio.sleep(SEGUNDOS_ENTRE_LATIDOS)
+        try:
+            await svc.llm.precalentar([config.llm_model])
+        except Exception:  # noqa: BLE001 - un latido fallido no debe tumbar la app
+            pass
+
 
 @asynccontextmanager
 async def ciclo_de_vida(app: FastAPI):
@@ -127,7 +145,15 @@ async def ciclo_de_vida(app: FastAPI):
         print(f"  gramaticas de extraccion compiladas ({len(SLOTS_EXTRACCION)} slots) en "
               f"{(_time.perf_counter() - _t0) * 1000:.0f} ms")
 
+        latido = asyncio.create_task(_latido_modelo())
+        print(f"  latido cada {SEGUNDOS_ENTRE_LATIDOS // 60} min para que el modelo no se descargue")
+    else:
+        latido = None
+
     yield
+
+    if latido is not None:
+        latido.cancel()
 
     if svc.llm:
         await svc.llm.cerrar()

@@ -14,7 +14,9 @@ __pycache__/
 *.egg-info/
 
 # Runtime
-logs/
+# logs/ SI se versiona: la rubrica pide que las metricas del README sean
+# verificables contra los logs, y sin ellos la afirmacion no se puede comprobar.
+# Solo son trazas de sesiones de prueba con voz propia, no hay datos de paciente.
 data/*.db-wal
 data/*.db-shm
 data/uploads/
@@ -31,3 +33,9 @@ demo/voces/
 
 # Audio sintetizado para el banco de ASR: se regenera solo.
 eval/audio_bench/
+
+# El video se sube a YouTube (modo oculto) y su enlace va en el README.
+# 410 MB no caben en un repositorio: GitHub rechaza archivos de mas de 100 MB.
+*.mp4
+*.mov
+*.mkv

@@ -60,15 +60,15 @@ class Contador:
 
 # Cuanto tiempo mantiene Ollama el modelo residente tras la ultima peticion.
 #
-# El valor por defecto de Ollama son 5 minutos, y eso rompe la conversacion: si
-# el paciente se queda pensando, el modelo se descarga y el siguiente turno paga
-# la recarga. Medido en una llamada real, un turno costo 17,2 s por esta causa
-# frente a los 1,3 s del mismo turno con el modelo caliente.
+# El valor por defecto son 5 minutos y rompe la conversacion: si el paciente se
+# queda pensando, el modelo se descarga y el siguiente turno paga la recarga.
+# Medido: 17,2 s en un turno cuyo equivalente cuesta 1,3 s con el modelo caliente.
 #
-# No se usa -1 (residente para siempre) a proposito: en una maquina de 8-16 GB,
-# que la que pide el reto, retener el modelo indefinidamente compite con el
-# embebedor y el motor de voz.
-KEEP_ALIVE = "30m"
+# Se subio de 30 min a 2 h tras un caso peor: una sesion iniciada una hora
+# despues del arranque pago 48,4 s en su primer turno con modelo. Ese es
+# exactamente el escenario del jurado -- se levanta la aplicacion y la llamada
+# llega mas tarde --, asi que ademas hay un latido periodico en main.py.
+KEEP_ALIVE = "2h"
 
 
 class ClienteLLM:
