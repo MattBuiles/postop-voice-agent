@@ -109,7 +109,7 @@ class SintetizadorEdge:
             return b"".join(trozos)
 
         with self._lock:
-            mp3 = asyncio.run(descargar())
+            mp3 = _ejecutar(descargar())
         return _mp3_a_pcm(mp3)
 
     def sintetizar(self, texto: str) -> Iterator[bytes]:
@@ -121,6 +121,25 @@ class SintetizadorEdge:
             yield cacheado
             return
         yield self._sintetizar(texto)
+
+
+def _ejecutar(corrutina):
+    """Ejecuta una corrutina desde codigo sincrono, haya o no un bucle en marcha.
+
+    `asyncio.run` lanza RuntimeError si ya hay un bucle activo en este hilo, y
+    eso ocurre cuando la sintesis se invoca desde el arranque de la aplicacion,
+    que es asincrono. El sintomo era engañoso: parecia que el servicio de voz
+    no estaba disponible y el sistema se replegaba a Piper sin necesidad.
+    """
+    import concurrent.futures
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(corrutina)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ejecutor:
+        return ejecutor.submit(asyncio.run, corrutina).result()
 
 
 def _mp3_a_pcm(mp3: bytes) -> bytes:
