@@ -103,9 +103,17 @@ async def ciclo_de_vida(app: FastAPI):
     except Exception as exc:  # noqa: BLE001 - sin voz la app sigue siendo util
         print(f"  aviso: no se pudo cargar el backend de voz '{config.tts_backend}': {exc}")
     if svc.tts:
-        # Pre-sintetizar aqui es lo que deja los turnos guionados en 0 ms de TTS.
-        nuevas = await asyncio.to_thread(svc.tts.precalentar, maquina.frases_pre_sintetizables())
-        print(f"  voz {config.tts_backend}/{config.tts_voice}: {nuevas} frases pre-sintetizadas")
+        try:
+            # Pre-sintetizar aqui es lo que deja los turnos guionados en 0 ms de TTS.
+            nuevas = await asyncio.to_thread(
+                svc.tts.precalentar, maquina.frases_pre_sintetizables()
+            )
+            print(f"  voz {config.tts_backend}/{config.tts_voice}: "
+                  f"{nuevas} frases pre-sintetizadas")
+        except Exception as exc:  # noqa: BLE001
+            # Un fallo de sintesis no puede impedir el arranque: la consola de
+            # conocimiento y el resto del sistema siguen siendo utiles.
+            print(f"  aviso: fallo la pre-sintesis de voz ({type(exc).__name__}: {exc})")
 
     # Cargar el reconocedor de voz ANTES de atender la primera llamada.
     #

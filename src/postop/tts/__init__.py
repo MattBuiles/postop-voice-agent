@@ -26,9 +26,18 @@ def crear_sintetizador(backend: str, voz: str, *, modelos: Path, cache_dir: Path
         try:
             from postop.tts.edge import SintetizadorEdge
 
-            return SintetizadorEdge(voz, cache_dir=cache_dir)
+            sintetizador = SintetizadorEdge(voz, cache_dir=cache_dir)
+            # Prueba real: construir el objeto no basta. El servicio de Microsoft
+            # puede rechazar la conexion (403 desde dentro de Docker, red sin
+            # salida, bloqueo por region), y eso solo se descubre al sintetizar.
+            # Si se dejara para el primer turno, la aplicacion arrancaria y la
+            # llamada del jurado se quedaria muda.
+            if not any(sintetizador.sintetizar("prueba")):
+                raise RuntimeError("el servicio devolvió audio vacío")
+            return sintetizador
         except Exception as exc:  # noqa: BLE001
-            print(f"  aviso: backend de voz 'edge' no disponible ({exc}); se usa piper")
+            print(f"  aviso: backend de voz 'edge' no disponible ({type(exc).__name__}); "
+                  f"se repliega a piper")
             voz = VOZ_PIPER_POR_DEFECTO
 
     from postop.tts.voz import SintetizadorVoz
