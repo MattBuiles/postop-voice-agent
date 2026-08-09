@@ -76,7 +76,9 @@ quiere verificar: `make index`.
 
 ---
 
-## Modelo declarado (compuerta G3)
+## Modelos y herramientas declarados
+
+### Modelo de lenguaje (compuerta G3)
 
 **`llama3.2:3b`**, local vía Ollama. Opcionalmente `llama3.2:1b` como extractor
 en la arquitectura de dos niveles (`LLM_EXTRACTOR_MODEL`). Ambos están en la
@@ -105,6 +107,33 @@ límites de peticiones ni dependencia de red en una sesión cronometrada.
 `src/postop/config.py` **falla el arranque** si el modelo configurado no pertenece
 a ninguna de las familias permitidas. La compuerta se defiende con código, no con
 disciplina.
+
+### Herramientas de voz
+
+El reto no restringe la voz, solo el modelo de lenguaje. Estas son las piezas
+usadas, todas libres y sin credenciales:
+
+| Función | Herramienta | Detalle |
+|---|---|---|
+| **Voz → texto** (STT) | **faster-whisper**, modelo `small`, int8 en CPU | Local. Sesgado al vocabulario clínico y a los regionalismos colombianos mediante `initial_prompt` |
+| **Detección de fin de habla** (VAD) | Energía por ventana, en el navegador | Umbral de 700 ms de silencio |
+| **Números hablados** | Parser determinista propio (`asr/numeros.py`) | La temperatura y el dolor no los interpreta el modelo |
+| **Texto → voz** (TTS) | **Microsoft Edge**, voz `es-CO-SalomeNeural` | Voz colombiana neuronal, sin API key. Alternativa local: **Piper** (`TTS_BACKEND=piper`) |
+
+Ambos backends de voz son intercambiables por configuración. Con `piper`, la
+solución completa funciona **sin conexión a internet**; el audio del paciente
+nunca sale de la máquina en ninguno de los dos casos, porque la transcripción es
+siempre local.
+
+### Otros componentes
+
+| Función | Herramienta |
+|---|---|
+| Embeddings | `paraphrase-multilingual-mpnet-base-v2` vía fastembed (ONNX) |
+| Índice vectorial y léxico | SQLite con `sqlite-vec` y FTS5 |
+| Extracción de PDF | pypdfium2, con OCR de respaldo (`rapidocr-onnxruntime`) |
+| Servidor | FastAPI + uvicorn |
+| Interfaz | HTML y JavaScript sin compilación |
 
 ---
 
