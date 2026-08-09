@@ -32,6 +32,8 @@ class SintetizadorVoz:
         from piper import PiperVoice
 
         self._voz = PiperVoice.load(str(ruta_modelo), str(ruta_modelo) + ".json")
+        self.backend = "piper"
+        self.voz = ruta_modelo.stem
         self.sample_rate: int = self._voz.config.sample_rate
         self._cache: dict[str, bytes] = {}
         self._cache_dir = cache_dir

@@ -108,7 +108,7 @@ async def ciclo_de_vida(app: FastAPI):
             nuevas = await asyncio.to_thread(
                 svc.tts.precalentar, maquina.frases_pre_sintetizables()
             )
-            print(f"  voz {config.tts_backend}/{config.tts_voice}: "
+            print(f"  voz {getattr(svc.tts, 'backend', '?')}/{getattr(svc.tts, 'voz', '?')}: "
                   f"{nuevas} frases pre-sintetizadas")
         except Exception as exc:  # noqa: BLE001
             # Un fallo de sintesis no puede impedir el arranque: la consola de
@@ -204,8 +204,12 @@ async def salud():
         "modelos_instalados": modelos,
         "embed_model": config.embed_model,
         "tts": bool(svc.tts),
-        "tts_backend": config.tts_backend,
-        "tts_voice": config.tts_voice,
+        # Lo EFECTIVO, no lo configurado: si el backend neuronal no estaba
+        # disponible y se replego a Piper, decir "edge" aqui seria mentir sobre
+        # lo que el jurado va a oir.
+        "tts_backend": getattr(svc.tts, "backend", None),
+        "tts_voice": getattr(svc.tts, "voz", None),
+        "tts_backend_configurado": config.tts_backend,
         "perfil_triaje": config.triage_profile,
         "chunks": n_chunks,
         "version_corpus": store.version_corpus(svc.conn),

@@ -51,6 +51,7 @@ class SintetizadorEdge:
                 "el backend de voz 'edge' necesita ffmpeg para decodificar MP3 a PCM"
             )
         self.voz = voz
+        self.backend = "edge"
         self.sample_rate = SAMPLE_RATE
         self._cache: dict[str, bytes] = {}
         self._cache_dir = cache_dir
