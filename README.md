@@ -136,34 +136,38 @@ consola, que es el vector natural de la compuerta G5.
 
 <!-- METRICAS:INICIO -->
 
-_Generado por `make metrics` desde 5 llamada(s) y 23 turno(s) registrados en `logs/`. Commit `sin-commit`._
+_Generado por `make metrics` desde 11 llamada(s) y 61 turno(s) registrados en `logs/`. Commit `f951313`._
 
 | Métrica | Valor |
 |---|---|
-| Latencia de respuesta P50 | **1 ms** |
-| Latencia de respuesta P95 | **4778 ms** |
-| Turnos medidos | 23 |
-| Tokens de entrada por turno (medio) | 135 |
-| Tokens de salida por turno (medio) | 2 |
-| Tokens de entrada por llamada (medio) | 620 |
-| Tokens de salida por llamada (medio) | 11 |
-| Invocaciones al modelo por turno | 0.35 |
-| Consultas al RAG por llamada | 0.00 |
+| Latencia de respuesta P50 | **2140 ms** |
+| Latencia de respuesta P95 | **18590 ms** |
+| Turnos medidos | 61 |
+| Tokens de entrada por turno (medio) | 179 |
+| Tokens de salida por turno (medio) | 4 |
+| Tokens de entrada por llamada (medio) | 995 |
+| Tokens de salida por llamada (medio) | 22 |
+| Invocaciones al modelo por turno | 0.44 |
+| Consultas al RAG por llamada | 0.09 |
 
 **Desglose de latencia por etapa** (ms):
 
 | Etapa | P50 | P95 |
 |---|---|---|
-| extraccion | 0 | 4778 |
-| total | 1 | 4778 |
+| extraccion | 2103 | 16170 |
+| generacion | 39236 | 39236 |
+| primer_audio | 2140 | 18590 |
+| rag | 9967 | 9967 |
+| stt | 1858 | 4959 |
+| total | 2140 | 18590 |
 
 **Costo estimado por llamada.** La solución corre local, así que el costo medido es cero. Se extrapola el mismo consumo de tokens a precios de API de producción para hacer la cifra comparable:
 
 | Escenario | USD por llamada |
 |---|---|
 | local (Llama 3.2 3B en Ollama) | $0.000000 |
-| modelo pequeno de nube (referencia) | $0.000066 |
-| modelo grande de nube (referencia) | $0.002027 |
+| modelo pequeno de nube (referencia) | $0.000108 |
+| modelo grande de nube (referencia) | $0.003314 |
 
 _Fórmula: `(tokens_entrada / 1e6 × precio_entrada) + (tokens_salida / 1e6 × precio_salida)`, con los tokens medidos por Ollama (`prompt_eval_count` y `eval_count`), no estimados._
 

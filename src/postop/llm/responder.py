@@ -61,6 +61,22 @@ ESQUEMA = {
     "required": ["respuesta", "cita_literal", "documento"],
 }
 
+# Similitud minima entre la pregunta del paciente y la respuesta del agente.
+#
+# Verificar que la cita existe y que respalda la respuesta NO basta. Medido en
+# una prueba real de conocimiento vivo: tras borrar el documento sobre zumbido de
+# oido, el agente respondio "no sumergir la herida en agua" y marco la respuesta
+# como anclada. Las dos comprobaciones anteriores pasaban -- la cita era literal
+# del corpus y la respuesta era esa misma frase -- porque ninguna miraba si la
+# respuesta tenia algo que ver con lo PREGUNTADO.
+#
+# Es justo el fallo que arruina la compuerta G5: en vez de reconocer que ya no
+# sabe, el agente agarra un pasaje cualquiera y responde con confianza.
+#
+# Medido sobre este corpus: respuestas pertinentes 0.585-0.852, la irrelevante
+# 0.442.
+UMBRAL_PERTINENCIA = 0.52
+
 FRASE_LIMITE = (
     "Esa no me la sé con la información que tengo, y prefiero no decirle algo "
     "equivocado. La dejo anotada para que el equipo médico se la responda."
@@ -91,7 +107,12 @@ class RespuestaAnclada:
 
 
 async def responder(
-    cliente: ClienteLLM, pregunta: str, pasajes: list[Pasaje], *, modelo: str | None = None
+    cliente: ClienteLLM,
+    pregunta: str,
+    pasajes: list[Pasaje],
+    *,
+    modelo: str | None = None,
+    embedder=None,
 ) -> RespuestaAnclada:
     """Genera una respuesta y la valida contra su fuente antes de devolverla."""
     if not pasajes:
@@ -150,6 +171,21 @@ async def responder(
             veredicto.respuesta_sugerida, False, None, cita, veredicto.motivo, respuesta,
             bloqueada_por_guarda=veredicto.motivo,
         )
+
+    # Tercera comprobacion: ¿la respuesta contesta lo que se pregunto?
+    if embedder is not None:
+        import numpy as np
+
+        pertinencia = float(
+            np.dot(embedder.embed_consulta(pregunta), embedder.embed_consulta(texto))
+        )
+        if pertinencia < UMBRAL_PERTINENCIA:
+            return RespuestaAnclada(
+                FRASE_LIMITE, False, None, cita,
+                f"la respuesta está anclada pero no contesta la pregunta "
+                f"(pertinencia {pertinencia:.2f} < {UMBRAL_PERTINENCIA})",
+                respuesta,
+            )
 
     pasaje = next((p for p in pasajes if p.chunk_uid == anclaje.chunk_uid), pasajes[0])
     # Se muestra la frase REAL del documento, no la que redactó el modelo: es la

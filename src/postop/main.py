@@ -29,6 +29,7 @@ from postop.db import store
 from postop.dialog import guardas, maquina
 from postop.llm import responder
 from postop.llm.client import ClienteLLM
+from postop.llm.extract import SLOTS as SLOTS_EXTRACCION
 from postop.llm.extract import extraer
 from postop.obs import traza as obs
 from postop.rag import ingest
@@ -107,17 +108,23 @@ async def ciclo_de_vida(app: FastAPI):
         for modelo, ms in tiempos.items():
             print(f"  modelo {modelo} precalentado en {ms:.0f} ms")
 
-        # Y una extraccion REAL, con su esquema y sus ejemplos.
+        # Y una extraccion real POR CADA SLOT, con su esquema y sus ejemplos.
         #
         # El precalentado de arriba manda una peticion trivial y sin esquema, asi
         # que la primera extraccion de verdad seguia pagando la compilacion de la
-        # gramatica de salida estructurada y el prellenado del prompt completo.
-        # Medido en una llamada real: 17.996 ms en el primer turno con modelo,
-        # frente a 1.191-4.674 ms en los siguientes.
+        # gramatica de salida estructurada. Medido: 17.996 ms en el primer turno
+        # con modelo de una llamada real.
+        #
+        # Y no basta con precalentar uno: la gramatica se compila POR ESQUEMA, y
+        # cada slot tiene el suyo (enums distintos). Medido: 4.119 ms la primera
+        # vez sobre un slot nuevo frente a 1.265-1.337 ms una vez compilado. Sin
+        # esto, los tres primeros turnos de una llamada pagan cuatro segundos
+        # cada uno.
         _t0 = _time.perf_counter()
-        await extraer(svc.llm, "Me muevo despacito pero camino", "movilidad",
-                      modelo=config.modelo_extractor)
-        print(f"  gramatica de extraccion compilada en "
+        for _slot in SLOTS_EXTRACCION:
+            await extraer(svc.llm, "no sé, más o menos", _slot,
+                          modelo=config.modelo_extractor)
+        print(f"  gramaticas de extraccion compiladas ({len(SLOTS_EXTRACCION)} slots) en "
               f"{(_time.perf_counter() - _t0) * 1000:.0f} ms")
 
     yield
@@ -253,7 +260,7 @@ async def consultar(payload: dict):
     if not pregunta:
         raise HTTPException(400, "falta 'pregunta'")
     pasajes = svc.recuperador.buscar(pregunta, escenario=payload.get("escenario"))
-    resultado = await responder.responder(svc.llm, pregunta, pasajes)
+    resultado = await responder.responder(svc.llm, pregunta, pasajes, embedder=svc.embedder)
     return {
         "respuesta": resultado.to_dict(),
         "pasajes": [p.to_dict() for p in pasajes],
@@ -485,7 +492,9 @@ async def _procesar_turno(ws, estado, audio, evento, enviar_agente, texto_direct
             "pregunta": extraccion.pregunta_del_paciente,
             "pasajes": [p.to_dict() for p in pasajes],
         })
-        anclada = await responder.responder(svc.llm, extraccion.pregunta_del_paciente, pasajes)
+        anclada = await responder.responder(
+            svc.llm, extraccion.pregunta_del_paciente, pasajes, embedder=svc.embedder
+        )
         crono.marcar("generacion")
         if anclada.respuesta_llm:
             tokens["entrada"] += anclada.respuesta_llm.tokens_entrada

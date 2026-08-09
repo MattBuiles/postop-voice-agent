@@ -33,8 +33,8 @@ Apunta aquí los números antes de empezar:
 
 | Dato | Dónde sale | Valor |
 |---|---|---|
-| Latencia P50 | `make metrics` | `___` ms |
-| Latencia P95 | `make metrics` | `___` ms |
+| Latencia P50 | `make metrics` | `2140` ms |
+| Latencia P95 | `make metrics` | `18590` ms |
 
 **Pantalla:** dos pestañas abiertas — `localhost:8080/call` y `localhost:8080/admin`.
 Terminal lista en la carpeta del proyecto. Sube el tamaño de letra del navegador
