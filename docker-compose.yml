@@ -44,9 +44,23 @@ services:
     depends_on:
       modelo:
         condition: service_completed_successfully
+    # El .env del usuario se inyecta en el contenedor.
+    #
+    # Sin esto, la imagen no ve ningun .env -- el Dockerfile no lo copia, y con
+    # razon: contendria secretos en entregas reales -- asi que la aplicacion caia
+    # a los valores por defecto del codigo y TODA la configuracion que hiciera
+    # quien levanta la solucion se ignoraba en silencio, pese a que el README
+    # indica copiar la plantilla.
+    #
+    # `required: false` para que `docker compose up` siga funcionando si aun no
+    # se ha creado el .env.
+    env_file:
+      - path: .env
+        required: false
     environment:
+      # Estas dos se imponen sobre el .env a proposito: dentro de la red de
+      # Docker el modelo no esta en localhost, y la base vive en el volumen.
       LLM_BASE_URL: http://ollama:11434
-      LLM_MODEL: ${LLM_MODEL:-llama3.2:3b}
       DB_PATH: /app/data/knowledge.db
     volumes:
       - ./data:/app/data
