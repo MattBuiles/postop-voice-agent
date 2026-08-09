@@ -10,7 +10,7 @@ cuándo escalar a personal humano.
 
 | Entregable | Enlace |
 |---|---|
-| **Video (demo + preguntas de cierre)** | ⚠️ _PENDIENTE — pegar aquí la URL de YouTube (modo oculto)_ |
+| **Video (demo + preguntas de cierre)** | <https://youtu.be/SJMZYWM-KrA> |
 | Diagrama de arquitectura y flujo de decisión | [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) |
 | Informe final | [`docs/INFORME-FINAL.md`](docs/INFORME-FINAL.md) |
 
