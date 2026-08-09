@@ -42,6 +42,23 @@ make run         # http://localhost:8080
 Requiere un Ollama accesible en `LLM_BASE_URL` con el modelo declarado:
 `ollama pull llama3.2:3b`.
 
+### Arranque en frío, medido
+
+Cronometrado siguiendo estas mismas instrucciones sobre un clon limpio, con
+volumen de Docker nuevo para que el modelo se descargue desde cero:
+
+| Hito | Tiempo |
+|---|---:|
+| Repositorio clonado | 3 s |
+| Imagen construida y modelo descargado | 202 s |
+| **Aplicación respondiendo** | **466 s (7,8 min)** |
+
+Las cinco compuertas se verificaron después contra ese contenedor recién
+construido, no contra el entorno de desarrollo: `5/5`.
+
+El límite del reto son 15 minutos. El margen depende del ancho de banda, porque
+el término dominante es la descarga del modelo (~2 GB).
+
 ### Qué NO hay que esperar en el arranque
 
 El índice vectorial (**107 documentos, ~2.400 fragmentos**) viaja **pre-construido**
