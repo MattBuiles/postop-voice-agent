@@ -22,11 +22,17 @@ dependencies = [
     "openpyxl==3.1.5",
     "piper-tts==1.2.0",
     "faster-whisper==1.1.1",
-    # Voces colombianas neuronales. Va en las dependencias BASE, no en un
-    # extra, porque .env.example la selecciona por defecto: si no estuviera
-    # en la imagen de Docker, quien copiara la plantilla se quedaria sin voz
-    # y eso es la compuerta G4.
-    "edge-tts==7.0.0",
+    # Voces colombianas neuronales. Va en las dependencias BASE, no en un extra,
+    # porque .env.example la selecciona por defecto: si no estuviera en la imagen
+    # de Docker, quien copiara la plantilla se quedaria sin voz, y eso es la
+    # compuerta G4.
+    #
+    # El minimo NO es arbitrario. Microsoft rota un token de autenticacion
+    # (Sec-MS-GEC) y bloquea a los clientes viejos: con 7.0.0 el servicio
+    # responde 403 y la sintesis falla. Es un componente que depende de una API
+    # no contratada, asi que puede volver a romperse; por eso el sistema se
+    # repliega solo a Piper cuando no esta disponible.
+    "edge-tts>=7.2.8",
 ]
 
 [project.optional-dependencies]
